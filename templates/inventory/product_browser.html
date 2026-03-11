@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ürün Tarayıcı - BackStore{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        padding-top: 70px;
+    }
+
+    .split-container {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 0;
+        min-height: calc(100vh - 70px);
+    }
+
+    .search-panel {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 30px;
+        overflow-y: auto;
+        border-right: 1px solid #ddd;
+    }
+
+    .search-title {
+        color: white;
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 30px;
+    }
+
+    .search-field {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 25px;
+    }
+
+    .search-field label {
+        font-weight: 600;
+        color: white;
+        margin-bottom: 10px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .search-field input {
+        padding: 12px 15px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 8px;
+        font-size: 14px;
+        background: rgba(255,255,255,0.1);
+        color: white;
+        transition: all 0.3s ease;
+    }
+
+    .search-field input::placeholder {
+        color: rgba(255,255,255,0.7);
+    }
+
+    .search-field input:focus {
+        outline: none;
+        border-color: white;
+        background: rgba(255,255,255,0.2);
+        box-shadow: 0 0 0 3px rgba(255,255,255,0.1);
+    }
+
+    .search-btn {
+        background: white;
+        color: #667eea;
+        border: none;
+        padding: 14px 30px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-top: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .search-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255,255,255,0.3);
+    }
+
+    .results-panel {
+        background: white;
+        padding: 40px;
+        overflow-y: auto;
+    }
+
+    .results-title {
+        color: #333;
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 15px;
+    }
+
+    .product-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+        border-left: 4px solid #667eea;
+    }
+
+    .product-name {
+        color: #333;
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 15px;
+    }
+
+    .info-row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        margin-bottom: 10px;
+        font-size: 13px;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #667eea;
+    }
+
+    .info-value {
+        color: #555;
+    }
+
+    .stock-section {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+    }
+
+    .stock-section h5 {
+        color: #333;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stock-item {
+        background: #f0f0f0;
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        font-size: 12px;
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+    }
+
+    .no-results h3 {
+        color: #666;
+        margin-bottom: 10px;
+    }
+
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        text-align: center;
+        animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(30px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-content h2 {
+        color: #ff6b6b;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .modal-content p {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 16px;
+    }
+
+    .modal-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 12px 40px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .modal-btn:hover {
+        background: #764ba2;
+    }
+
+    @media (max-width: 992px) {
+        .split-container {
+            grid-template-columns: 1fr;
+        }
+
+        .search-panel {
+            border-right: none;
+            border-bottom: 1px solid #ddd;
+        }
+    }
+</style>
+
+<form method="GET" id="searchForm">
+    <div class="split-container">
+        <!-- Sol Panel: Arama Formu -->
+        <div class="search-panel">
+            <div class="search-title">🔍 Ürün Ara</div>
+            
+            <div class="search-field">
+                <label for="spec_code">Özel Kod</label>
+                <input type="text" id="spec_code" name="spec_code" placeholder="Özel kod girin..." value="{{ spec_code }}">
+            </div>
+
+            <div class="search-field">
+                <label for="barcode">Barkod</label>
+                <input type="text" id="barcode" name="barcode" placeholder="Barkod girin..." value="{{ barcode }}">
+            </div>
+
+            <div class="search-field">
+                <label for="colour">Renk Kodu</label>
+                <input type="text" id="colour" name="colour" placeholder="Renk girin..." value="{{ colour }}">
+            </div>
+
+            <div class="search-field">
+                <label for="prod_name">Ürün Adı</label>
+                <input type="text" id="prod_name" name="prod_name" placeholder="Ürün adı girin..." value="{{ prod_name }}">
+            </div>
+
+            <button type="submit" class="search-btn">Ara</button>
+        </div>
+
+        <!-- Sağ Panel: Arama Sonuçları -->
+        <div class="results-panel">
+            {% if searched %}
+                {% if search_results %}
+                    <div class="results-title">📦 Ürün Detayları ({{ search_results.count }} sonuç)</div>
+                    {% for product in search_results %}
+                        <div class="product-card">
+                            <div class="product-name">{{ product.prodName }}</div>
+                            
+                            <div class="info-row">
+                                <div class="info-label">Özel Kod:</div>
+                                <div class="info-value">{{ product.specCode }}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">Barkod:</div>
+                                <div class="info-value">{{ product.barcode }}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">Beden/Yaş:</div>
+                                <div class="info-value">{{ product.sizeAge }}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">Renk:</div>
+                                <div class="info-value">{{ product.colour }}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">Cinsiyet:</div>
+                                <div class="info-value">{{ product.gender }}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">Fiyat:</div>
+                                <div class="info-value"><strong>{{ product.price }} ₺</strong></div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">İndirim:</div>
+                                <div class="info-value">%{{ product.discount }}</div>
+                            </div>
+
+                            {% if product.stocks.all %}
+                                <div class="stock-section">
+                                    <h5>📊 Stok Bilgileri</h5>
+                                    {% for stock in product.stocks.all %}
+                                        <div class="stock-item">
+                                            <strong>{{ stock.store.name }}</strong> - {{ stock.quantity }} adet
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="stock-section">
+                                    <h5>📊 Stok Bilgileri</h5>
+                                    <div class="stock-item">Stok bilgisi mevcut değil</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% elif no_results %}
+                    <!-- Sonuç Bulunmadı Modal -->
+                    <div class="modal-overlay show" id="noResultsModal">
+                        <div class="modal-content">
+                            <h2>⚠️ Ürün Mevcut Değil</h2>
+                            <p>Aradığınız kriterlere uygun bir ürün bulunamadı.</p>
+                            <button type="button" class="modal-btn" onclick="closeModal()">Tamam</button>
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="no-results">
+                    <h3>Hoşgeldiniz</h3>
+                    <p>Arama yapmak için sol paneldeki formu kullanın.<br>En az bir alan doldurmalısınız.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</form>
+
+<script>
+    function closeModal() {
+        const modal = document.getElementById('noResultsModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
+
+    document.getElementById('noResultsModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeModal();
+        }
+    });
+</script>
+
+{% endblock %}

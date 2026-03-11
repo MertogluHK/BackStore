@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kayıt Başarılı - Stok Kontrol{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="success-container">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h2 class="success-title">Kayıt Başarılı!</h2>
+                <p class="success-message">Giriş sayfasına yönlendirileceksiniz...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .success-container {
+        text-align: center;
+        padding: 60px 30px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        color: white;
+        animation: slideInUp 0.6s ease-out;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .success-icon {
+        font-size: 80px;
+        margin-bottom: 20px;
+        animation: scaleAndBounce 0.8s ease-out;
+    }
+
+    @keyframes scaleAndBounce {
+        0% {
+            transform: scale(0);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .success-title {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 15px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .success-message {
+        font-size: 16px;
+        margin-bottom: 30px;
+        line-height: 1.6;
+        opacity: 0.95;
+    }
+
+    .countdown {
+        font-size: 14px;
+        opacity: 0.85;
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
+        padding-top: 20px;
+    }
+
+    .countdown p {
+        margin: 0;
+    }
+
+    #seconds {
+        font-weight: 700;
+        font-size: 18px;
+        display: inline-block;
+        min-width: 40px;
+    }
+</style>
+
+<script>
+    let timeRemaining = 2.5;
+    const MAX_TIME = 2.5;
+
+    function updateCountdown() {
+        const secondsElement = document.getElementById('seconds');
+        const progress = (timeRemaining / MAX_TIME) * 100;
+
+        if (secondsElement) {
+            secondsElement.textContent = timeRemaining.toFixed(1);
+        }
+
+        if (timeRemaining <= 0) {
+            // Giriş sayfasına yönlendir
+            window.location.href = "{% url 'login' %}";
+        } else {
+            timeRemaining -= 0.1;
+            setTimeout(updateCountdown, 100);
+        }
+    }
+
+    // Countdown başlat
+    updateCountdown();
+</script>
+{% endblock %}
