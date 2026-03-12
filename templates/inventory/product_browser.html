@@ -13,14 +13,16 @@
         display: grid;
         grid-template-columns: 1fr 2fr;
         gap: 0;
-        min-height: calc(100vh - 70px);
     }
 
     .search-panel {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 40px 30px;
-        overflow-y: auto;
         border-right: 1px solid #ddd;
+        position: sticky;
+        top: 70px;
+        max-height: calc(100vh - 70px);
+        overflow-y: auto;
     }
 
     .search-title {
@@ -90,7 +92,6 @@
     .results-panel {
         background: white;
         padding: 40px;
-        overflow-y: auto;
     }
 
     .results-title {
@@ -305,12 +306,25 @@
                             </div>
                             <div class="info-row">
                                 <div class="info-label">Fiyat:</div>
-                                <div class="info-value"><strong>{{ product.price }} ₺</strong></div>
+                                <div class="info-value">
+                                    {% if product.discount > 0 %}
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <span style="text-decoration: line-through; color: #999;">{{ product.price }} ₺</span>
+                                            <span style="color: #ff6b6b; font-weight: 700; font-size: 16px;" class="discounted-price" data-price="{{ product.price }}" data-discount="{{ product.discount }}">
+                                                0 ₺
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <strong>{{ product.price }} ₺</strong>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <div class="info-row">
-                                <div class="info-label">İndirim:</div>
-                                <div class="info-value">%{{ product.discount }}</div>
-                            </div>
+                            {% if product.discount > 0 %}
+                                <div class="info-row">
+                                    <div class="info-label">İndirim:</div>
+                                    <div class="info-value" style="color: #ff6b6b; font-weight: 600;">-%{{ product.discount }}</div>
+                                </div>
+                            {% endif %}
 
                             {% if product.stocks.all %}
                                 <div class="stock-section">
@@ -350,6 +364,14 @@
 </form>
 
 <script>
+    // Calculate discounted prices
+    document.querySelectorAll('.discounted-price').forEach(element => {
+        const price = parseFloat(element.getAttribute('data-price'));
+        const discount = parseFloat(element.getAttribute('data-discount'));
+        const discountedPrice = price - (price * discount / 100);
+        element.textContent = discountedPrice.toFixed(0) + ' ₺';
+    });
+
     function closeModal() {
         const modal = document.getElementById('noResultsModal');
         if (modal) {

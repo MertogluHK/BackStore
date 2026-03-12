@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator
+from .models import UserProfile, Store
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -19,6 +20,19 @@ class UserRegistrationForm(UserCreationForm):
         max_length=100, 
         required=True,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Soyad'})
+    )
+    store = forms.ModelChoiceField(
+        queryset=Store.objects.filter(is_active=True),
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Çalıştığı Mağaza',
+        empty_label='Mağaza Seçiniz'
+    )
+    user_id = forms.CharField(
+        max_length=20,
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Kullanıcı ID'}),
+        label='Kullanıcı ID'
     )
 
     class Meta:

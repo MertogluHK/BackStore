@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
 
 class Store(models.Model):
+    code = models.CharField(max_length=10, unique=True, default='', verbose_name=_('Mağaza Kodu'))
     name = models.CharField(max_length=100, unique=True, verbose_name=_('Mağaza Adı'))
     address = models.CharField(max_length=255, verbose_name=_('Adres'))
     city = models.CharField(max_length=100, verbose_name=_('Şehir'))
@@ -15,10 +16,10 @@ class Store(models.Model):
     class Meta:
         verbose_name = _('Mağaza')
         verbose_name_plural = _('Mağazalar')
-        ordering = ['name']
+        ordering = ['code']
 
     def __str__(self):
-        return self.name
+        return f"{self.code} - {self.name}"
 
 
 class UserProfile(models.Model):
@@ -29,6 +30,7 @@ class UserProfile(models.Model):
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    user_id_code = models.CharField(max_length=20, null=True, blank=True, verbose_name=_('Kullanıcı ID'))
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='employee')
     store = models.ForeignKey(Store, on_delete=models.PROTECT, null=True, blank=True, verbose_name=_('Mağaza'))
     is_active = models.BooleanField(default=True)
@@ -40,11 +42,11 @@ class UserProfile(models.Model):
         verbose_name_plural = _('Kullanıcı Profilleri')
 
     def __str__(self):
-        return f"{self.user.username} - {self.get_role_display()}"
+        return f"{self.user_id_code} - {self.user.username} - {self.get_role_display()}"
 
 
 class Product(models.Model):
-    specCode = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name=_('Özel Kod'))
+    specCode = models.CharField(max_length=50, null=True, blank=True, verbose_name=_('Özel Kod'))
     barcode = models.CharField(max_length=50, null=True, blank=True, verbose_name=_('Barkod'))
     prodName = models.CharField(max_length=200, null=True, blank=True, verbose_name=_('Ürün Adı'))
     sizeAge = models.CharField(max_length=50, null=True, blank=True, verbose_name=_('Beden/Yaş'))

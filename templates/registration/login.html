@@ -24,8 +24,12 @@
                     <form method="POST" novalidate>
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label for="username" class="form-label">Kullanıcı Adı</label>
-                            <input type="text" class="form-control" id="username" name="username" value="{{ username }}" required autofocus>
+                            <label for="store_code" class="form-label">Mağaza Kodu</label>
+                            <input type="text" class="form-control" id="store_code" name="store_code" value="{{ store_code }}"  required autofocus>
+                        </div>
+                        <div class="mb-3">
+                            <label for="user_id" class="form-label">Kullanıcı ID</label>
+                            <input type="text" class="form-control" id="user_id" name="user_id" value="{{ user_id }}" required>
                         </div>
                         <div class="mb-3">
                             <label for="password" class="form-label">Şifre</label>
@@ -33,11 +37,6 @@
                         </div>
                         <button type="submit" class="btn btn-dark w-100 mb-3">Giriş Yap</button>
                     </form>
-                    
-                    <hr>
-                    <p class="text-center">Henüz hesabınız yok mu? 
-                        <a href="{% url 'register' %}" class="text-decoration-none">Kaydol</a>
-                    </p>
                 </div>
             </div>
         </div>

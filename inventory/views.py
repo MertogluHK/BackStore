@@ -4,16 +4,28 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Q
-from .models import UserProfile, Product
+from django.http import HttpResponseForbidden
+from .models import UserProfile, Product, Store
 from .forms import UserRegistrationForm
 
 
+@login_required(login_url='login')
 def register(request):
+    # Sadece admin kullanıcıları kayıt oluşturabilir
+    try:
+        profile = request.user.profile
+        if profile.role != 'admin':
+            return HttpResponseForbidden('❌ Yalnızca Admin kullanıcılar yeni kullanıcı kaydı oluşturabilir.')
+    except UserProfile.DoesNotExist:
+        return HttpResponseForbidden('❌ Yalnızca Admin kullanıcılar yeni kullanıcı kaydı oluşturabilir.')
+    
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            UserProfile.objects.create(user=user, role='employee')
+            store = form.cleaned_data.get('store')
+            user_id = form.cleaned_data.get('user_id')
+            UserProfile.objects.create(user=user, role='employee', store=store, user_id_code=user_id)
             return render(request, 'registration/register_success.html')
     else:
         form = UserRegistrationForm()
@@ -22,40 +34,50 @@ def register(request):
 
 def login_view(request):
     if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
+        store_code = request.POST.get('store_code', '').strip()
+        user_id = request.POST.get('user_id', '').strip()
         password = request.POST.get('password', '').strip()
         
         # Boş alan kontrolü
-        if not username or not password:
-            messages.error(request, '❌ Kullanıcı adı ve şifre alanları boş bırakılamaz.')
-            return render(request, 'registration/login.html', {'username': username})
+        if not store_code or not user_id or not password:
+            messages.error(request, '❌ Mağaza kodu, kullanıcı ID ve şifre alanları boş bırakılamaz.')
+            return render(request, 'registration/login.html', {
+                'store_code': store_code,
+                'user_id': user_id
+            })
         
-        # Kullanıcı adı ile user var mı kontrol et
+        # Mağaza kontrol et
         try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            messages.error(request, '❌ Kullanıcı bulunamadı.')
-            return render(request, 'registration/login.html', {'username': username})
+            store = Store.objects.get(code=store_code)
+        except Store.DoesNotExist:
+            messages.error(request, '❌ Mağaza kodu geçersiz.')
+            return render(request, 'registration/login.html', {
+                'store_code': store_code,
+                'user_id': user_id
+            })
+        
+        # Kullanıcı profili bul
+        try:
+            profile = UserProfile.objects.get(user_id_code=user_id, store=store)
+        except UserProfile.DoesNotExist:
+            messages.error(request, '❌ Kullanıcı ID veya mağaza kodu hatalı.')
+            return render(request, 'registration/login.html', {
+                'store_code': store_code,
+                'user_id': user_id
+            })
         
         # Şifreyi kontrol et
+        user = profile.user
         if user.check_password(password):
-            # Şifre doğru, login yap
-            authenticated_user = authenticate(request, username=username, password=password)
-            if authenticated_user is not None:
-                login(request, authenticated_user)
-                
-                # UserProfile yoksa oluştur
-                UserProfile.objects.get_or_create(
-                    user=authenticated_user,
-                    defaults={'role': 'employee'}
-                )
-                
-                messages.success(request, f'✅ Hoşgeldiniz, {user.first_name}!')
-                return redirect('dashboard')
+            login(request, user)
+            messages.success(request, f'✅ Hoşgeldiniz, {user.first_name}!')
+            return redirect('dashboard')
         else:
-            # Şifre yanlış
             messages.error(request, '❌ Şifre yanlış.')
-            return render(request, 'registration/login.html', {'username': username})
+            return render(request, 'registration/login.html', {
+                'store_code': store_code,
+                'user_id': user_id
+            })
     
     return render(request, 'registration/login.html')
 
