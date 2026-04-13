@@ -68,6 +68,12 @@
         box-shadow: 0 0 0 3px rgba(255,255,255,0.1);
     }
 
+    .search-field.error input {
+        border-color: #e74c3c !important;
+        background: rgba(228, 76, 60, 0.1) !important;
+        box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2) !important;
+    }
+
     .search-btn {
         background: white;
         color: #667eea;
@@ -145,7 +151,7 @@
         color: #333;
         font-size: 13px;
         font-weight: 700;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
@@ -156,6 +162,38 @@
         border-radius: 6px;
         margin-bottom: 8px;
         font-size: 12px;
+    }
+
+    .variants-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        background: white;
+    }
+
+    .variants-table th {
+        background: #667eea;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .variants-table td {
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+        font-size: 13px;
+    }
+
+    .variants-table tr:hover {
+        background: #f9f9f9;
+    }
+
+    .variants-table tr:last-child td {
+        border-bottom: none;
     }
 
     .no-results {
@@ -263,13 +301,13 @@
             </div>
 
             <div class="search-field">
-                <label for="colour">Renk Kodu</label>
-                <input type="text" id="colour" name="colour" placeholder="Renk girin..." value="{{ colour }}">
+                <label for="prod_name">Ürün Adı</label>
+                <input type="text" id="prod_name" name="prod_name" placeholder="Ürün adı girin..." value="{{ prod_name }}">
             </div>
 
             <div class="search-field">
-                <label for="prod_name">Ürün Adı</label>
-                <input type="text" id="prod_name" name="prod_name" placeholder="Ürün adı girin..." value="{{ prod_name }}">
+                <label for="colour">Renk Kodu</label>
+                <input type="text" id="colour" name="colour" placeholder="Renk girin..." value="{{ colour }}">
             </div>
 
             <button type="submit" class="search-btn">Ara</button>
@@ -279,22 +317,15 @@
         <div class="results-panel">
             {% if searched %}
                 {% if search_results %}
-                    <div class="results-title">📦 Ürün Detayları ({{ search_results.count }} sonuç)</div>
-                    {% for product in search_results %}
+                    <div class="results-title">📦 Ürün Detayları ({{ grouped_results|length }} sonuç)</div>
+                    {% for spec_code, group in grouped_results.items %}
+                        {% with product=group.main_product variants=group.variants %}
                         <div class="product-card">
                             <div class="product-name">{{ product.prodName }}</div>
                             
                             <div class="info-row">
                                 <div class="info-label">Özel Kod:</div>
                                 <div class="info-value">{{ product.specCode }}</div>
-                            </div>
-                            <div class="info-row">
-                                <div class="info-label">Barkod:</div>
-                                <div class="info-value">{{ product.barcode }}</div>
-                            </div>
-                            <div class="info-row">
-                                <div class="info-label">Beden/Yaş:</div>
-                                <div class="info-value">{{ product.sizeAge }}</div>
                             </div>
                             <div class="info-row">
                                 <div class="info-label">Renk:</div>
@@ -326,22 +357,48 @@
                                 </div>
                             {% endif %}
 
-                            {% if product.stocks.all %}
-                                <div class="stock-section">
-                                    <h5>📊 Stok Bilgileri</h5>
-                                    {% for stock in product.stocks.all %}
-                                        <div class="stock-item">
-                                            <strong>{{ stock.store.name }}</strong> - {{ stock.quantity }} adet
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <div class="stock-section">
-                                    <h5>📊 Stok Bilgileri</h5>
-                                    <div class="stock-item">Stok bilgisi mevcut değil</div>
-                                </div>
-                            {% endif %}
+                            <!-- Varyasyonlar ve Stok Tablosu -->
+                            <div class="stock-section">
+                                <h5>📦 Beden/Stok Detayları</h5>
+                                <table class="variants-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Barkod</th>
+                                            <th>Beden/Yaş</th>
+                                            <th>Depo</th>
+                                            <th>Reyon</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for variant in variants %}
+                                            <tr>
+                                                <td><strong>{{ variant.barcode }}</strong></td>
+                                                <td><strong>{{ variant.sizeAge }}</strong></td>
+                                                <td>
+                                                    <strong>
+                                                        {% if variant.stocks.all %}
+                                                            {{ variant.stocks.first.warehouse_quantity }}
+                                                        {% else %}
+                                                            0
+                                                        {% endif %}
+                                                    </strong>
+                                                </td>
+                                                <td>
+                                                    <strong>
+                                                        {% if variant.stocks.all %}
+                                                            {{ variant.stocks.first.shelf_quantity }}
+                                                        {% else %}
+                                                            0
+                                                        {% endif %}
+                                                    </strong>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+                        {% endwith %}
                     {% endfor %}
                 {% elif no_results %}
                     <!-- Sonuç Bulunmadı Modal -->
@@ -350,6 +407,15 @@
                             <h2>⚠️ Ürün Mevcut Değil</h2>
                             <p>Aradığınız kriterlere uygun bir ürün bulunamadı.</p>
                             <button type="button" class="modal-btn" onclick="closeModal()">Tamam</button>
+                        </div>
+                    </div>
+                {% elif has_error %}
+                    <!-- Hatalı Arama Modal -->
+                    <div class="modal-overlay show" id="errorModal">
+                        <div class="modal-content">
+                            <h2>❌ Geçersiz Arama</h2>
+                            <p>Renk kodu tek başına kullanılamaz.<br>Lütfen diğer alanlardan en az birini doldurarak tekrar deneyin.</p>
+                            <button type="button" class="modal-btn" onclick="closeErrorModal()">Tamam</button>
                         </div>
                     </div>
                 {% endif %}
@@ -364,6 +430,54 @@
 </form>
 
 <script>
+    // Form validation
+    document.getElementById('searchForm')?.addEventListener('submit', function(e) {
+        const specCode = document.getElementById('spec_code').value.trim();
+        const barcode = document.getElementById('barcode').value.trim();
+        const prodName = document.getElementById('prod_name').value.trim();
+        const colour = document.getElementById('colour').value.trim();
+
+        // Renk kodu tek başına doldurulduysa hata göster
+        if (colour && !specCode && !barcode && !prodName) {
+            e.preventDefault();
+            
+            // Diğer kutuları kırmızı yapmak için error class'ı ekle
+            document.getElementById('spec_code').parentElement.classList.add('error');
+            document.getElementById('barcode').parentElement.classList.add('error');
+            document.getElementById('prod_name').parentElement.classList.add('error');
+            
+            // Error modal'ı göster
+            const errorModal = document.getElementById('errorModal');
+            if (!errorModal) {
+                // Modal yoksa (ilk kez) yeni bir tane oluştur
+                const modal = document.createElement('div');
+                modal.id = 'errorModal';
+                modal.className = 'modal-overlay show';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <h2>❌ Geçersiz Arama</h2>
+                        <p>Renk kodu tek başına kullanılamaz.<br>Lütfen diğer alanlardan en az birini doldurarak tekrar deneyin.</p>
+                        <button type="button" class="modal-btn" onclick="closeErrorModal()">Tamam</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            return false;
+        }
+
+        // Diğer durumlarda error class'ını kaldır
+        document.getElementById('spec_code').parentElement.classList.remove('error');
+        document.getElementById('barcode').parentElement.classList.remove('error');
+        document.getElementById('prod_name').parentElement.classList.remove('error');
+    });
+
+    // Input içerikleri değiştiğinde error class'ını kaldır
+    ['spec_code', 'barcode', 'prod_name'].forEach(fieldId => {
+        document.getElementById(fieldId)?.addEventListener('input', function() {
+            this.parentElement.classList.remove('error');
+        });
+    });
+
     // Calculate discounted prices
     document.querySelectorAll('.discounted-price').forEach(element => {
         const price = parseFloat(element.getAttribute('data-price'));
@@ -379,9 +493,22 @@
         }
     }
 
+    function closeErrorModal() {
+        const modal = document.getElementById('errorModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
+
     document.getElementById('noResultsModal')?.addEventListener('click', function(e) {
         if (e.target === this) {
             closeModal();
+        }
+    });
+
+    document.getElementById('errorModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeErrorModal();
         }
     });
 </script>

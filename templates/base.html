@@ -113,8 +113,8 @@
             <button class="sidebar-btn" onclick="closeSidebarAndGo('/products/');">
                 <i class="fas fa-search"></i> Ürün Tarayıcı
             </button>
-            <button class="sidebar-btn" id="btnB">
-                <i class="fas fa-cube"></i> B
+            <button class="sidebar-btn" onclick="closeSidebarAndGo('/warehouse-shelf/');">
+                <i class="fas fa-warehouse"></i> Depo - Reyon
             </button>
             <button class="sidebar-btn" id="btnC">
                 <i class="fas fa-cube"></i> C
@@ -157,16 +157,18 @@
     </nav>
     {% endif %}
 
-    <div class="container-fluid">
-        {% if messages %}
+    {% if messages %}
+        <div class="messages-container">
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show mt-3" role="alert">
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             {% endfor %}
-        {% endif %}
+        </div>
+    {% endif %}
 
+    <div class="container-fluid">
         {% block content %}{% endblock %}
     </div>
 

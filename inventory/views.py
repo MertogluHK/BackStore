@@ -70,7 +70,6 @@ def login_view(request):
         user = profile.user
         if user.check_password(password):
             login(request, user)
-            messages.success(request, f'✅ Hoşgeldiniz, {user.first_name}!')
             return redirect('dashboard')
         else:
             messages.error(request, '❌ Şifre yanlış.')
@@ -105,8 +104,10 @@ def dashboard(request):
 @login_required(login_url='login')
 def product_browser(request):
     search_results = []
+    grouped_results = {}
     searched = False
     no_results = False
+    has_error = False
 
     # Arama parametreleri
     spec_code = request.GET.get('spec_code', '').strip()
@@ -117,30 +118,64 @@ def product_browser(request):
     # En az bir arama parametresi varsa arama yap
     if spec_code or barcode or prod_name or colour:
         searched = True
-        query = Q()
         
-        if spec_code:
-            query |= Q(specCode__icontains=spec_code)
-        if barcode:
-            query |= Q(barcode__icontains=barcode)
-        if prod_name:
-            query |= Q(prodName__icontains=prod_name)
-        if colour:
-            query |= Q(colour__icontains=colour)
-        
-        search_results = Product.objects.filter(query)
-        
-        # Sonuç yoksa no_results flag'ı set et
-        if not search_results:
-            no_results = True
+        # Renk kodu tek başına doldurulduysa hata göster
+        if colour and not (spec_code or barcode or prod_name):
+            has_error = True
+            no_results = False
+        else:
+            query = Q()
+            
+            if spec_code:
+                query |= Q(specCode__icontains=spec_code)
+            
+            # Barkod araması yapıldıysa, o barkoda ait ürünün specCode'unu bulup,
+            # aynı specCode'a sahip tüm ürünleri getir
+            if barcode:
+                barcode_product = Product.objects.filter(barcode__icontains=barcode).first()
+                if barcode_product:
+                    query |= Q(specCode=barcode_product.specCode)
+                else:
+                    query |= Q(barcode__icontains=barcode)
+            
+            if prod_name:
+                query |= Q(prodName__icontains=prod_name)
+            if colour:
+                query |= Q(colour__icontains=colour)
+            
+            search_results = Product.objects.filter(query).prefetch_related('stocks').order_by('specCode', 'barcode')
+            
+            # Ürünleri spec_code'a göre grupla
+            for product in search_results:
+                spec = product.specCode
+                if spec not in grouped_results:
+                    grouped_results[spec] = {
+                        'main_product': product,
+                        'variants': []
+                    }
+                grouped_results[spec]['variants'].append(product)
+            
+            # Sonuç yoksa no_results flag'ı set et
+            if not search_results:
+                no_results = True
 
     context = {
         'search_results': search_results,
+        'grouped_results': grouped_results,
         'searched': searched,
         'no_results': no_results,
+        'has_error': has_error,
         'spec_code': spec_code,
         'barcode': barcode,
         'prod_name': prod_name,
         'colour': colour,
     }
     return render(request, 'inventory/product_browser.html', context)
+
+
+@login_required(login_url='login')
+def warehouse_shelf(request):
+    context = {
+        'locations': ['Depo', 'Reyon'],
+    }
+    return render(request, 'inventory/warehouse_shelf.html', context)

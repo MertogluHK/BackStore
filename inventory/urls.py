@@ -10,4 +10,7 @@ urlpatterns = [
     
     # Product Browser
     path('products/', views.product_browser, name='product_browser'),
+    
+    # Warehouse - Shelf
+    path('warehouse-shelf/', views.warehouse_shelf, name='warehouse_shelf'),
 ]

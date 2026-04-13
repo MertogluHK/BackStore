@@ -4,7 +4,7 @@ from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
 
 class Store(models.Model):
-    code = models.CharField(max_length=10, unique=True, default='', verbose_name=_('Mağaza Kodu'))
+    code = models.CharField(max_length=10, primary_key=True, verbose_name=_('Mağaza Kodu'))
     name = models.CharField(max_length=100, unique=True, verbose_name=_('Mağaza Adı'))
     address = models.CharField(max_length=255, verbose_name=_('Adres'))
     city = models.CharField(max_length=100, verbose_name=_('Şehir'))
@@ -72,8 +72,10 @@ class Product(models.Model):
 
 class Stock(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='stocks', verbose_name=_('Ürün'))
-    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='stocks', verbose_name=_('Mağaza'))
-    quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], verbose_name=_('Miktar'))
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='stocks', verbose_name=_('Mağaza'), to_field='code', db_column='store_code')
+    warehouse_quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], verbose_name=_('Depo Stoku'))
+    shelf_quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], verbose_name=_('Reyon Stoku'))
+    quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], verbose_name=_('Toplam Miktar'))
     last_checked = models.DateTimeField(auto_now=True, verbose_name=_('Son Kontrol'))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Oluşturma Tarihi'))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Güncelleme Tarihi'))

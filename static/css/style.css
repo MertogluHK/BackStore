@@ -127,6 +127,20 @@ body {
     padding: 1rem;
 }
 
+.messages-container {
+    position: fixed;
+    top: 60px;
+    left: 20px;
+    z-index: 1001;
+    max-width: 350px;
+    pointer-events: auto;
+}
+
+.messages-container .alert {
+    margin-bottom: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
 .alert-success {
     background-color: rgba(39, 174, 96, 0.1);
     color: #27ae60;
