@@ -46,9 +46,9 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Stock)
 class StockAdmin(admin.ModelAdmin):
-    list_display = ('product', 'store', 'quantity', 'is_low_stock')
-    list_filter = ('store', 'created_at')
-    search_fields = ('product__name', 'product__sku', 'store__name')
+    list_display = ('barcode', 'store_code', 'quantity', 'is_low_stock')
+    list_filter = ('store_code', 'created_at')
+    search_fields = ('barcode', 'store_code')
     readonly_fields = ('created_at', 'updated_at', 'last_checked')
     
     def is_low_stock(self, obj):
@@ -59,9 +59,9 @@ class StockAdmin(admin.ModelAdmin):
 
 @admin.register(StockMovement)
 class StockMovementAdmin(admin.ModelAdmin):
-    list_display = ('product', 'store', 'movement_type', 'quantity', 'created_by', 'created_at')
-    list_filter = ('movement_type', 'store', 'created_at')
-    search_fields = ('product__name', 'reference', 'notes')
+    list_display = ('barcode', 'store_code', 'movement_type', 'quantity', 'created_by', 'created_at')
+    list_filter = ('movement_type', 'store_code', 'created_at')
+    search_fields = ('barcode', 'store_code', 'reference', 'notes')
     readonly_fields = ('created_by', 'created_at')
     
     def save_model(self, request, obj, form, change):

@@ -125,6 +125,8 @@ body {
     border: none;
     border-radius: 6px;
     padding: 1rem;
+    z-index: 9999;
+    position: relative;
 }
 
 .messages-container {

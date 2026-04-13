@@ -72,28 +72,31 @@ class Product(models.Model):
 
 class Stock(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='stocks', verbose_name=_('Ürün'))
-    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='stocks', verbose_name=_('Mağaza'), to_field='code', db_column='store_code')
-    warehouse_quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], verbose_name=_('Depo Stoku'))
-    shelf_quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], verbose_name=_('Reyon Stoku'))
-    quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], verbose_name=_('Toplam Miktar'))
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='stocks', verbose_name=_('Mağaza'))
+    quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], verbose_name=_('Miktar'))
     last_checked = models.DateTimeField(auto_now=True, verbose_name=_('Son Kontrol'))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Oluşturma Tarihi'))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Güncelleme Tarihi'))
 
     class Meta:
-        unique_together = ('product', 'store')
+        unique_together = ('barcode', 'store_code')
         verbose_name = _('Stok')
         verbose_name_plural = _('Stoklar')
         indexes = [
-            models.Index(fields=['product', 'store']),
+            models.Index(fields=['barcode', 'store_code']),
         ]
 
     def __str__(self):
-        return f"{self.product.name} - {self.store.name}: {self.quantity}"
+        return f"{self.barcode} - {self.store_code}: {self.quantity}"
 
     @property
     def is_low_stock(self):
-        return self.quantity <= self.product.reorder_level
+        # Ürün bilgisi almak için barcode üzerinden Product'ı sorgula
+        try:
+            product = Product.objects.get(barcode=self.barcode)
+            return self.quantity <= getattr(product, 'reorder_level', 10)
+        except Product.DoesNotExist:
+            return False
 
 
 class StockMovement(models.Model):
@@ -104,8 +107,8 @@ class StockMovement(models.Model):
         ('return', _('İade')),
     ]
 
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='movements', verbose_name=_('Ürün'))
-    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='movements', verbose_name=_('Mağaza'))
+    barcode = models.CharField(max_length=50, default='', verbose_name=_('Barkod'))
+    store_code = models.CharField(max_length=10, default='', verbose_name=_('Mağaza Kodu'))
     movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES, verbose_name=_('Hareket Türü'))
     quantity = models.IntegerField(verbose_name=_('Miktar'))
     reference = models.CharField(max_length=100, blank=True, verbose_name=_('Referans'))
@@ -118,9 +121,9 @@ class StockMovement(models.Model):
         verbose_name_plural = _('Stok Hareketleri')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['product', 'store']),
+            models.Index(fields=['barcode', 'store_code']),
             models.Index(fields=['created_at']),
         ]
 
     def __str__(self):
-        return f"{self.product.name} - {self.get_movement_type_display()} ({self.quantity})"
+        return f"{self.barcode} - {self.get_movement_type_display()} ({self.quantity})"

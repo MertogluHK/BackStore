@@ -7,35 +7,35 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         stores_data = [
             {
-                'code': 'M01',
+                'code': 'M1',
                 'name': 'İstanbul Mağazası',
                 'address': 'Sultanbeyli, İstanbul',
                 'city': 'İstanbul',
                 'phone': '0212-XXX-XXXX',
             },
             {
-                'code': 'M02',
+                'code': 'M2',
                 'name': 'Ankara Mağazası',
                 'address': 'Çankaya, Ankara',
                 'city': 'Ankara',
                 'phone': '0312-XXX-XXXX',
             },
             {
-                'code': 'M03',
+                'code': 'M3',
                 'name': 'İzmir Mağazası',
                 'address': 'Alsancak, İzmir',
                 'city': 'İzmir',
                 'phone': '0232-XXX-XXXX',
             },
             {
-                'code': 'M04',
+                'code': 'M4',
                 'name': 'Bursa Mağazası',
                 'address': 'Osmangazi, Bursa',
                 'city': 'Bursa',
                 'phone': '0224-XXX-XXXX',
             },
             {
-                'code': 'M05',
+                'code': 'M5',
                 'name': 'Antalya Mağazası',
                 'address': 'Muratpaşa, Antalya',
                 'city': 'Antalya',
