@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ürün Yönetimi - Admin Panel{% endblock %}
+
+{% block content %}
+<style>
+    .admin-container {
+        max-width: 1400px;
+        margin: 100px auto 50px;
+        padding: 0 20px;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 40px;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 20px;
+    }
+
+    .admin-header h1 {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+    }
+
+    .admin-nav {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 50px;
+    }
+
+    .admin-nav-btn {
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: #34495e;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+
+    .admin-nav-btn:hover {
+        background-color: #2980b9;
+        transform: translateY(-2px);
+    }
+
+    .admin-nav-btn.active {
+        background-color: #3498db;
+        border-color: #2980b9;
+    }
+
+    .section-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-top: 40px;
+    }
+
+    @media (max-width: 1200px) {
+        .section-container {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-section h2 {
+        font-size: 24px;
+        color: #2c3e50;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #3498db;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 14px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid #ecf0f1;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    @media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .submit-btn {
+        background-color: #27ae60;
+        color: white;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+
+    .submit-btn:hover {
+        background-color: #229954;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .products-section {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        grid-column: 1 / -1;
+    }
+
+    .products-section h2 {
+        font-size: 24px;
+        color: #2c3e50;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #3498db;
+    }
+
+    .products-count {
+        background-color: #ecf0f1;
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-weight: 600;
+        color: #34495e;
+    }
+
+    .products-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    .products-table thead {
+        background-color: #34495e;
+        color: white;
+    }
+
+    .products-table th {
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .products-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #ecf0f1;
+    }
+
+    .products-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .product-name {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .product-barcode {
+        font-family: monospace;
+        background-color: #ecf0f1;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+
+    .price {
+        color: #27ae60;
+        font-weight: 600;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #95a5a6;
+    }
+
+    .empty-state h3 {
+        font-size: 18px;
+        color: #7f8c8d;
+        margin-bottom: 10px;
+    }
+
+    .empty-state p {
+        font-size: 14px;
+    }
+
+    .alert {
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-weight: 500;
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+</style>
+
+<div class="admin-container">
+    <div class="admin-header">
+        <h1>Ürün Yönetimi</h1>
+    </div>
+
+    <div class="admin-nav">
+        <a href="{% url 'admin_users' %}" class="admin-nav-btn">Kullanıcı Yönetimi</a>
+        <a href="{% url 'admin_stocks_management' %}" class="admin-nav-btn active">Ürün Yönetimi</a>
+        <a href="{% url 'admin_create_user' %}" class="admin-nav-btn" style="margin-left: auto;">➕ Kullanıcı Oluştur</a>
+    </div>
+
+    <!-- Mesajlar -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="section-container">
+        <!-- Ürün Ekleme Formu -->
+        <div class="form-section">
+            <h2>📦 Yeni Ürün Ekle</h2>
+            <form method="POST" action="{% url 'admin_stocks_management' %}">
+                {% csrf_token %}
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.specCode.id_for_label }}">{{ form.specCode.label }}</label>
+                        {{ form.specCode }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.barcode.id_for_label }}">{{ form.barcode.label }}</label>
+                        {{ form.barcode }}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.prodName.id_for_label }}">{{ form.prodName.label }} *</label>
+                    {{ form.prodName }}
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.sizeAge.id_for_label }}">{{ form.sizeAge.label }}</label>
+                        {{ form.sizeAge }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.colour.id_for_label }}">{{ form.colour.label }}</label>
+                        {{ form.colour }}
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.gender.id_for_label }}">{{ form.gender.label }}</label>
+                        {{ form.gender }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.price.id_for_label }}">{{ form.price.label }}</label>
+                        {{ form.price }}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.discount.id_for_label }}">{{ form.discount.label }}</label>
+                    {{ form.discount }}
+                </div>
+
+                <button type="submit" class="submit-btn">✅ Ürünü Kaydet</button>
+            </form>
+        </div>
+
+        <!-- Ek Bilgiler -->
+        <div class="form-section">
+            <h2>ℹ️ Bilgiler</h2>
+            <div style="color: #34495e; line-height: 1.8;">
+                <p><strong>📊 Toplam Ürün Sayısı:</strong></p>
+                <p style="font-size: 28px; color: #3498db; font-weight: 700; margin: 10px 0;">{{ total_products }}</p>
+                
+                <hr style="border: none; border-top: 2px solid #ecf0f1; margin: 20px 0;">
+                
+                <p><strong>📝 Form Hakkında:</strong></p>
+                <ul style="margin-left: 20px; font-size: 14px;">
+                    <li>Ürün adı zorunlu alandır</li>
+                    <li>Diğer alanlar isteğe bağlıdır</li>
+                    <li>Fiyat ve indirim sayı olmalıdır</li>
+                    <li>İndirim 0-100 arasında bir değer olmalıdır</li>
+                </ul>
+                
+                <hr style="border: none; border-top: 2px solid #ecf0f1; margin: 20px 0;">
+                
+                <p><strong>💡 İpuçları:</strong></p>
+                <ul style="margin-left: 20px; font-size: 14px;">
+                    <li>Barkod kullanarak ürünleri stokla</li>
+                    <li>Özel kodlar kategorilendirme için kullanılabilir</li>
+                    <li>Her ürün türü için farklı nitelikler girebilirsiniz</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ürün Listesi -->
+    <div class="products-section">
+        <h2>📋 Kayıtlı Ürünler</h2>
+        <div class="products-count">📦 Toplam: {{ total_products }} ürün</div>
+
+        {% if products %}
+            <div style="overflow-x: auto;">
+                <table class="products-table">
+                    <thead>
+                        <tr>
+                            <th>Ürün Adı</th>
+                            <th>Barkod</th>
+                            <th>Beden/Yaş</th>
+                            <th>Renk</th>
+                            <th>Cinsiyet</th>
+                            <th>Fiyat (TL)</th>
+                            <th>İndirim (%)</th>
+                            <th>Kayıt Tarihi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                            <tr>
+                                <td><span class="product-name">{{ product.prodName|default:"Adı yok" }}</span></td>
+                                <td><span class="product-barcode">{{ product.barcode|default:"-" }}</span></td>
+                                <td>{{ product.sizeAge|default:"-" }}</td>
+                                <td>{{ product.colour|default:"-" }}</td>
+                                <td>{{ product.gender|default:"-" }}</td>
+                                <td><span class="price">{{ product.price|default:"-" }}</span></td>
+                                <td>{{ product.discount|default:"0" }}%</td>
+                                <td>{{ product.created_at|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>📭 Henüz ürün kaydı yok</h3>
+                <p>Sol taraftaki form kullanarak yeni ürün ekleyebilirsiniz.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

@@ -32,7 +32,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     user_id_code = models.CharField(max_length=20, null=True, blank=True, verbose_name=_('Kullanıcı ID'))
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='employee')
-    store = models.ForeignKey(Store, on_delete=models.PROTECT, null=True, blank=True, verbose_name=_('Mağaza'))
+    store_code = models.CharField(max_length=10, null=True, blank=True, verbose_name=_('Mağaza Kodu'), db_index=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -71,23 +71,31 @@ class Product(models.Model):
 
 
 class Stock(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='stocks', verbose_name=_('Ürün'))
-    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='stocks', verbose_name=_('Mağaza'))
+    LOCATION_CHOICES = [
+        ('warehouse', _('Depo')),
+        ('shelf', _('Reyon')),
+    ]
+
+    barcode = models.CharField(max_length=50, verbose_name=_('Barkod'))
+    store_code = models.CharField(max_length=10, verbose_name=_('Mağaza Kodu'))
+    location = models.CharField(max_length=20, choices=LOCATION_CHOICES, default='warehouse', verbose_name=_('Yer'))
     quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], verbose_name=_('Miktar'))
     last_checked = models.DateTimeField(auto_now=True, verbose_name=_('Son Kontrol'))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Oluşturma Tarihi'))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Güncelleme Tarihi'))
 
     class Meta:
-        unique_together = ('barcode', 'store_code')
+        unique_together = ('barcode', 'store_code', 'location')
         verbose_name = _('Stok')
         verbose_name_plural = _('Stoklar')
         indexes = [
-            models.Index(fields=['barcode', 'store_code']),
+            models.Index(fields=['barcode', 'store_code', 'location']),
+            models.Index(fields=['store_code', 'location']),
         ]
+        ordering = ['store_code', 'location', 'barcode']
 
     def __str__(self):
-        return f"{self.barcode} - {self.store_code}: {self.quantity}"
+        return f"{self.barcode} - {self.store_code} ({self.get_location_display()}): {self.quantity}"
 
     @property
     def is_low_stock(self):
@@ -97,6 +105,13 @@ class Stock(models.Model):
             return self.quantity <= getattr(product, 'reorder_level', 10)
         except Product.DoesNotExist:
             return False
+    
+    @classmethod
+    def get_total_quantity(cls, barcode, store_code):
+        """Bir barkod için mağazadaki toplam stok (depo + reyon)"""
+        warehouse = cls.objects.filter(barcode=barcode, store_code=store_code, location='warehouse').first()
+        shelf = cls.objects.filter(barcode=barcode, store_code=store_code, location='shelf').first()
+        return (warehouse.quantity if warehouse else 0) + (shelf.quantity if shelf else 0)
 
 
 class StockMovement(models.Model):
@@ -105,12 +120,21 @@ class StockMovement(models.Model):
         ('out', _('Çıkış')),
         ('adjustment', _('Ayarlama')),
         ('return', _('İade')),
+        ('transfer', _('Transfer')),  # Depo ↔ Reyon
+    ]
+
+    LOCATION_CHOICES = [
+        ('warehouse', _('Depo')),
+        ('shelf', _('Reyon')),
     ]
 
     barcode = models.CharField(max_length=50, default='', verbose_name=_('Barkod'))
     store_code = models.CharField(max_length=10, default='', verbose_name=_('Mağaza Kodu'))
+    location = models.CharField(max_length=20, choices=LOCATION_CHOICES, default='warehouse', verbose_name=_('Yer'))
     movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES, verbose_name=_('Hareket Türü'))
     quantity = models.IntegerField(verbose_name=_('Miktar'))
+    from_location = models.CharField(max_length=20, choices=LOCATION_CHOICES, blank=True, null=True, verbose_name=_('Nereden'))
+    to_location = models.CharField(max_length=20, choices=LOCATION_CHOICES, blank=True, null=True, verbose_name=_('Nereye'))
     reference = models.CharField(max_length=100, blank=True, verbose_name=_('Referans'))
     notes = models.TextField(blank=True, verbose_name=_('Notlar'))
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, verbose_name=_('Oluşturan'))
@@ -123,7 +147,8 @@ class StockMovement(models.Model):
         indexes = [
             models.Index(fields=['barcode', 'store_code']),
             models.Index(fields=['created_at']),
+            models.Index(fields=['store_code', 'location']),
         ]
 
     def __str__(self):
-        return f"{self.barcode} - {self.get_movement_type_display()} ({self.quantity})"
+        return f"{self.barcode} - {self.get_movement_type_display()} ({self.quantity}) @ {self.store_code}"

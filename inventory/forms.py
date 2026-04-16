@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator
-from .models import UserProfile, Store
+from .models import UserProfile, Store, Product
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -27,12 +27,6 @@ class UserRegistrationForm(UserCreationForm):
         widget=forms.Select(attrs={'class': 'form-control'}),
         label='Çalıştığı Mağaza',
         empty_label='Mağaza Seçiniz'
-    )
-    user_id = forms.CharField(
-        max_length=20,
-        required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Kullanıcı ID'}),
-        label='Kullanıcı ID'
     )
 
     class Meta:
@@ -111,3 +105,81 @@ class UserLoginForm(AuthenticationForm):
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Şifre'})
     )
+
+
+class ProductForm(forms.ModelForm):
+    """Ürün oluşturma ve düzenleme formu"""
+    
+    class Meta:
+        model = Product
+        fields = ['specCode', 'barcode', 'prodName', 'sizeAge', 'colour', 'gender', 'price', 'discount']
+        labels = {
+            'specCode': 'Özel Kod',
+            'barcode': 'Barkod',
+            'prodName': 'Ürün Adı',
+            'sizeAge': 'Beden/Yaş',
+            'colour': 'Renk',
+            'gender': 'Cinsiyet',
+            'price': 'Fiyat',
+            'discount': 'İndirim (%)',
+        }
+        widgets = {
+            'specCode': forms.TextInput(attrs={
+                'class': 'form-control',
+                'required': False
+            }),
+            'barcode': forms.TextInput(attrs={
+                'class': 'form-control',
+                'required': False
+            }),
+            'prodName': forms.TextInput(attrs={
+                'class': 'form-control',
+                'required': False
+            }),
+            'sizeAge': forms.TextInput(attrs={
+                'class': 'form-control',
+                'required': False
+            }),
+            'colour': forms.TextInput(attrs={
+                'class': 'form-control',
+                'required': False
+            }),
+            'gender': forms.Select(attrs={
+                'class': 'form-control',
+            }),
+            'price': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'required': False,
+                'min': 0
+            }),
+            'discount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'required': False,
+                'min': 0,
+                'max': 100,
+                'value': 0
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Cinsiyet alan seçeneklerini dinamik hale getirelim
+        self.fields['gender'].choices = [
+            ('', '--- Cinsiyet Seçiniz ---'),
+            ('Erkek', 'Erkek'),
+            ('Kadın', 'Kadın'),
+            ('Unisex', 'Unisex'),
+        ]
+
+    def clean_price(self):
+        price = self.cleaned_data.get('price')
+        if price is not None and price < 0:
+            raise forms.ValidationError('Fiyat negatif olamaz.')
+        return price
+
+    def clean_discount(self):
+        discount = self.cleaned_data.get('discount')
+        if discount is not None:
+            if discount < 0 or discount > 100:
+                raise forms.ValidationError('İndirim 0 ile 100 arasında olmalıdır.')
+        return discount

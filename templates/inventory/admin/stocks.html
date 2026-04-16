@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ürün Yönetimi - Admin Panel{% endblock %}
+
+{% block content %}
+<style>
+    .admin-container {
+        max-width: 1200px;
+        margin: 100px auto 50px;
+        padding: 0 20px;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 40px;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 20px;
+    }
+
+    .admin-header h1 {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+    }
+
+    .admin-nav {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 50px;
+    }
+
+    .admin-nav-btn {
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: #34495e;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+
+    .admin-nav-btn:hover {
+        background-color: #2980b9;
+        transform: translateY(-2px);
+    }
+
+    .admin-nav-btn.active {
+        background-color: #3498db;
+        border-color: #2980b9;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th {
+        background-color: #34495e;
+        color: white;
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #ecf0f1;
+    }
+
+    tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .badge.warehouse {
+        background-color: #3498db;
+        color: white;
+    }
+
+    .badge.shelf {
+        background-color: #27ae60;
+        color: white;
+    }
+
+    .badge.low-stock {
+        background-color: #e74c3c;
+        color: white;
+    }
+
+    .quantity {
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .quantity.low {
+        color: #e74c3c;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 40px;
+        color: #7f8c8d;
+        font-size: 16px;
+    }
+</style>
+
+<div class="admin-container">
+    <div class="admin-header">
+        <h1>Ürün Yönetimi</h1>
+    </div>
+
+    <div class="admin-nav">
+        <a href="{% url 'admin_panel' %}" class="admin-nav-btn">Dashboard</a>
+        
+        <div class="admin-nav-dropdown">
+            <button class="admin-nav-btn admin-nav-dropdown-btn">Kullanıcı Yönetimi</button>
+            <div class="admin-nav-dropdown-menu">
+                <a href="{% url 'admin_users' %}">👥 Kullanıcıları Görüntüle</a>
+                <a href="{% url 'admin_create_user' %}">➕ Kullanıcı Oluştur</a>
+            </div>
+        </div>
+        
+        <a href="{% url 'admin_stores' %}" class="admin-nav-btn">Mağazalar</a>
+        <a href="{% url 'admin_products' %}" class="admin-nav-btn">Ürünler</a>
+        <a href="{% url 'admin_stocks' %}" class="admin-nav-btn active">Stoklar</a>
+    </div>
+
+    <div class="table-container">
+        {% if stocks %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Barkod</th>
+                    <th>Mağaza</th>
+                    <th>Yer</th>
+                    <th>Miktar</th>
+                    <th>Son Güncelleme</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in stocks %}
+                <tr>
+                    <td><strong>{{ stock.barcode }}</strong></td>
+                    <td>{{ stock.store_code }}</td>
+                    <td>
+                        <span class="badge {% if stock.location == 'warehouse' %}warehouse{% else %}shelf{% endif %}">
+                            {% if stock.location == 'warehouse' %}Depo{% else %}Reyon{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="quantity {% if stock.is_low_stock %}low{% endif %}">
+                            {{ stock.quantity }}
+                            {% if stock.is_low_stock %}
+                            <span class="badge low-stock" style="margin-left: 10px;">⚠️ Düşük</span>
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>{{ stock.updated_at|date:"d.m.Y H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-data">
+            ❌ Stok bulunamadı.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kullanıcı Oluştur - Admin Panel{% endblock %}
+
+{% block content %}
+<style>
+    .admin-container {
+        max-width: 600px;
+        margin: 100px auto 50px;
+        padding: 0 20px;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 40px;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 20px;
+    }
+
+    .admin-header h1 {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+    }
+
+    .back-link {
+        display: inline-block;
+        margin-bottom: 20px;
+        color: #3498db;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .back-link:hover {
+        color: #2980b9;
+    }
+
+    .form-container {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background-color: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .form-row-full {
+        grid-column: 1 / -1;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background-color: #27ae60;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #229954;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+    }
+
+    .btn-secondary {
+        background-color: #95a5a6;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #7f8c8d;
+        transform: translateY(-2px);
+    }
+
+    .errors {
+        background-color: #ffe6e6;
+        border: 2px solid #e74c3c;
+        color: #c0392b;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .errors ul {
+        margin: 0;
+        padding: 0 20px;
+    }
+
+    .errors li {
+        margin-bottom: 8px;
+    }
+
+    .form-group small {
+        display: block;
+        margin-top: 5px;
+        color: #7f8c8d;
+        font-size: 12px;
+    }
+</style>
+
+<div class="admin-container">
+    <a href="{% url 'admin_users' %}" class="back-link">← Geri Dön</a>
+
+    <div class="admin-header">
+        <h1>➕ Kullanıcı Oluştur</h1>
+    </div>
+
+    <div class="form-container">
+        {% if errors %}
+        <div class="errors">
+            <strong>Hata:</strong>
+            <ul>
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="username">Kullanıcı Adı *</label>
+                    <input type="text" id="username" name="username" required value="{{ form_data.username|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <label for="email">E-posta *</label>
+                    <input type="email" id="email" name="email" required value="{{ form_data.email|default:'' }}">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="first_name">Ad *</label>
+                    <input type="text" id="first_name" name="first_name" required value="{{ form_data.first_name|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <label for="last_name">Soyad *</label>
+                    <input type="text" id="last_name" name="last_name" required value="{{ form_data.last_name|default:'' }}">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password">Şifre *</label>
+                    <input type="password" id="password" name="password" required>
+                    <small>En az 6 karakter</small>
+                </div>
+                <div class="form-group">
+                    <label for="password_confirm">Şifreyi Onayla *</label>
+                    <input type="password" id="password_confirm" name="password_confirm" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="store_code">Mağaza Seçiniz *</label>
+                <select id="store_code" name="store_code" required>
+                    <option value="">-- Mağaza Seçiniz --</option>
+                    {% for store in stores %}
+                    <option value="{{ store.code }}" {% if form_data.store_code == store.code %}selected{% endif %}>{{ store.code }} - {{ store.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Oluştur</button>
+                <a href="{% url 'admin_users' %}" class="btn btn-secondary">İptal</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

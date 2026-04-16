@@ -26,8 +26,21 @@ class Command(BaseCommand):
             
             # Kullanıcı var mı kontrol et
             if User.objects.filter(username=username).exists():
-                self.stdout.write(self.style.WARNING(f'⚠ {username} zaten mevcut, atlandı'))
-                skipped_count += 1
+                admin_user = User.objects.get(username=username)
+                # Profile var mı kontrol et
+                if not UserProfile.objects.filter(user=admin_user).exists():
+                    UserProfile.objects.create(
+                        user=admin_user,
+                        user_id_code=user_id_code,
+                        role='admin',
+                        store_code=store.code,
+                        is_active=True
+                    )
+                    self.stdout.write(self.style.SUCCESS(f'✓ {username} profile oluşturuldu'))
+                    created_count += 1
+                else:
+                    self.stdout.write(self.style.WARNING(f'⚠ {username} zaten mevcut, atlandı'))
+                    skipped_count += 1
                 continue
             
             try:
@@ -45,7 +58,7 @@ class Command(BaseCommand):
                     user=admin_user,
                     user_id_code=user_id_code,
                     role='admin',
-                    store=store,
+                    store_code=store.code,
                     is_active=True
                 )
                 
