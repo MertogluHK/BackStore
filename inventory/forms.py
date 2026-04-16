@@ -144,8 +144,9 @@ class ProductForm(forms.ModelForm):
                 'class': 'form-control',
                 'required': False
             }),
-            'gender': forms.Select(attrs={
+            'gender': forms.TextInput(attrs={
                 'class': 'form-control',
+                'required': False
             }),
             'price': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -163,13 +164,6 @@ class ProductForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Cinsiyet alan seçeneklerini dinamik hale getirelim
-        self.fields['gender'].choices = [
-            ('', '--- Cinsiyet Seçiniz ---'),
-            ('Erkek', 'Erkek'),
-            ('Kadın', 'Kadın'),
-            ('Unisex', 'Unisex'),
-        ]
 
     def clean_price(self):
         price = self.cleaned_data.get('price')
