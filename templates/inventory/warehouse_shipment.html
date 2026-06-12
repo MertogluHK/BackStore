@@ -1,0 +1,814 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Depo Sevk - BackStore{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        padding-top: 80px;
+    }
+
+    .container-main {
+        max-width: 1400px;
+        margin: 30px auto;
+        padding: 0 20px;
+    }
+
+    .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .store-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+
+    .store-info-label {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        opacity: 0.9;
+        margin-bottom: 5px;
+    }
+
+    .store-info-value {
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+
+    .panel {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+
+    .panel-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #3498db;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 12px 15px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background-color: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .btn {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        width: 100%;
+    }
+
+    .btn-success {
+        background-color: #27ae60;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #229954;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+    }
+
+    .btn-danger {
+        background-color: #e74c3c;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #c0392b;
+        box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+    }
+
+    .btn-secondary {
+        background-color: #95a5a6;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #7f8c8d;
+    }
+
+    .btn-sm {
+        padding: 8px 12px;
+        font-size: 12px;
+        width: auto;
+    }
+
+    .shipment-info {
+        background: #f8f9fa;
+        border-left: 4px solid #3498db;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+
+    .shipment-code {
+        font-size: 16px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+
+    .shipment-meta {
+        font-size: 12px;
+        color: #7f8c8d;
+    }
+
+    .items-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .items-table thead {
+        background: #f8f9fa;
+        position: sticky;
+        top: 0;
+    }
+
+    .items-table th {
+        padding: 10px 8px;
+        text-align: left;
+        font-weight: 600;
+        color: #2c3e50;
+        border-bottom: 2px solid #ddd;
+    }
+
+    .items-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .items-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .items-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+
+    .item {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .item:last-child {
+        border-bottom: none;
+    }
+
+    .item-info {
+        flex: 1;
+    }
+
+    .item-barcode {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .item-details {
+        font-size: 12px;
+        color: #7f8c8d;
+        margin-top: 4px;
+    }
+
+    .item-quantity {
+        background: #3498db;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        margin: 0 10px;
+        min-width: 50px;
+        text-align: center;
+    }
+
+    .item-actions {
+        display: flex;
+        gap: 5px;
+    }
+
+    .btn-remove {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-remove:hover {
+        background: #c0392b;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+
+    .status-open {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .status-closed {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .status-sent {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .alert {
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .alert-info {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border-left: 4px solid #1976d2;
+    }
+
+    .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .stat {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: #7f8c8d;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-top: 5px;
+    }
+
+    .shipments-list {
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 2px solid #eee;
+    }
+
+    .shipment-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+
+    .shipment-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .shipment-card-title {
+        font-weight: 700;
+        color: #2c3e50;
+    }
+
+    @media (max-width: 768px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+</style>
+
+<div class="container-main">
+    <h1 class="page-title">📦 Depo Sevk - Koli Sistemi</h1>
+
+    <!-- Gönderen Depo Bilgisi -->
+    <div class="store-info">
+        <div class="store-info-label">🏪 Gönderen Depo (Mağazanız)</div>
+        <div class="store-info-value">
+            {{ sender_store.code }} - {{ sender_store.name }}
+        </div>
+    </div>
+
+    <!-- Ana İçerik -->
+    <div class="content-grid">
+        <!-- Sol Panel: Koli Oluştur ve Ürün Okut -->
+        <div class="panel">
+            <div class="panel-title">🔖 Koli Oluştur & Ürün Ekle</div>
+
+            <!-- Alıcı Mağaza Seçimi -->
+            <div class="form-group">
+                <label for="receiver_store">📍 Alıcı Depo Seçiniz</label>
+                <select id="receiver_store" required onchange="autoCreateShipment()">
+                    <option value="">-- Seçiniz --</option>
+                    {% for store in available_stores %}
+                        <option value="{{ store.code }}">{{ store.code }} - {{ store.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Koli Seçimi (Otomatik oluşturulduktan sonra görünecek) -->
+            <div id="shipmentSelector" style="display:none; margin-bottom: 20px;">
+                <div class="shipment-info">
+                    <div class="shipment-code" id="currentShipmentCode">-</div>
+                    <div class="shipment-meta" id="currentShipmentReceiver">-</div>
+                </div>
+            </div>
+
+            <!-- Barkod Okutma -->
+            <div class="form-group" id="barcodeSection" style="display:none;">
+                <label for="barcode">📊 Barkod Okutunuz</label>
+                <input type="text" id="barcode" placeholder="Barkodu okutunuz..." autocomplete="off" autofocus>
+            </div>
+
+            <div id="scanner-feedback" style="display:none; margin-bottom: 20px; padding: 12px; border-radius: 8px; text-align: center; font-weight: 600;"></div>
+
+            <div class="alert alert-info" style="display:none;" id="infoMsg">
+                💡 Barkodları okutarak koliye ürün ekleyebilirsiniz. Enter tuşu ile onaylayın.
+            </div>
+        </div>
+
+        <!-- Sağ Panel: Koli İçeriği -->
+        <div class="panel">
+            <div class="panel-title">📦 Koli İçeriği</div>
+
+            <div id="shipmentContent" style="display:none;">
+                <!-- İstatistikler -->
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-label">Toplam Ürün</div>
+                        <div class="stat-value" id="totalItems">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Benzersiz Ürün</div>
+                        <div class="stat-value" id="uniqueProducts">0</div>
+                    </div>
+                </div>
+
+                <!-- Durum -->
+                <div id="statusBadge"></div>
+
+                <!-- Ürünler Listesi (Tablo Biçimi) -->
+                <div class="items-list" id="itemsList">
+                    <div style="padding: 20px; text-align: center; color: #7f8c8d;">
+                        Henüz ürün eklenmemiş
+                    </div>
+                </div>
+
+                <!-- Koli İşlemleri -->
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-danger" id="closeShipmentBtn" style="flex: 1;">
+                        🔒 Koliyi Kapat
+                    </button>
+                    <button type="button" class="btn btn-success" id="sendShipmentBtn" style="flex: 1; display:none;">
+                        ✈️ Gönder
+                    </button>
+                </div>
+            </div>
+
+            <div id="noShipment" style="text-align: center; padding: 30px; color: #7f8c8d;">
+                <p>📋 Koli seçili değil</p>
+                <p style="font-size: 12px;">Soldan alıcı mağazasını seçiniz</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aktif Koliler Listesi -->
+    {% if active_shipments %}
+    <div class="shipments-list">
+        <h3 style="font-size: 20px; font-weight: 700; color: #2c3e50; margin-bottom: 20px;">📑 Açık & Kapalı Koliler</h3>
+
+        {% for shipment in active_shipments %}
+        <div class="shipment-card" onclick="selectShipment({{ shipment.id }})" style="cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.boxShadow='0 8px 20px rgba(52, 152, 219, 0.2)'; this.style.borderColor='#3498db';" onmouseout="this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; this.style.borderColor='#ddd';">
+            <div class="shipment-card-header">
+                <div>
+                    <div class="shipment-card-title">{{ shipment.shipment_code }}</div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
+                        → {{ shipment.receiver_store.code }} | {{ shipment.item_count }} ürün
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="status-badge status-{{ shipment.status }}">
+                        {% if shipment.status == 'open' %}
+                            🟢 Açık
+                        {% elif shipment.status == 'closed' %}
+                            🟡 Kapalı
+                        {% else %}
+                            ✅ Gönderildi
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    let currentShipmentId = null;
+    let currentShipmentStatus = null;
+    const senderStoreCode = '{{ sender_store.code }}';
+
+    // Mağaza seçilince otomatik koli oluştur
+    function autoCreateShipment() {
+        console.log('autoCreateShipment() çağrıldı');
+        const receiverStore = document.getElementById('receiver_store').value;
+        
+        if (!receiverStore) {
+            console.log('Alıcı depo seçili değil, reset yapılıyor');
+            currentShipmentId = null;
+            document.getElementById('shipmentSelector').style.display = 'none';
+            document.getElementById('barcodeSection').style.display = 'none';
+            document.getElementById('infoMsg').style.display = 'none';
+            document.getElementById('shipmentContent').style.display = 'none';
+            document.getElementById('noShipment').style.display = 'block';
+            return;
+        }
+
+        if (receiverStore === senderStoreCode) {
+            alert('⚠️ Alıcı depo gönderenden farklı olmalıdır!');
+            document.getElementById('receiver_store').value = '';
+            return;
+        }
+
+        console.log('Koli oluşturuluyor, alıcı depo:', receiverStore);
+        fetch('{{ request.path }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'action=create_shipment&receiver_store_code=' + receiverStore
+        })
+        .then(r => r.json())
+        .then(data => {
+            console.log('Create shipment response:', data);
+            if (data.success) {
+                currentShipmentId = data.shipment_id;
+                currentShipmentStatus = 'open';
+                
+                console.log('Shipment ID:', currentShipmentId);
+                document.getElementById('currentShipmentCode').textContent = data.shipment_code;
+                document.getElementById('currentShipmentReceiver').textContent = `→ ${data.receiver_store_name}`;
+                
+                console.log('Elementleri gösteriliyor...');
+                document.getElementById('shipmentSelector').style.display = 'block';
+                document.getElementById('barcodeSection').style.display = 'block';
+                document.getElementById('infoMsg').style.display = 'block';
+                document.getElementById('shipmentContent').style.display = 'block';
+                document.getElementById('noShipment').style.display = 'none';
+                
+                console.log('updateShipmentStats() çağrılıyor...');
+                updateShipmentStats();
+                document.getElementById('barcode').focus();
+            } else {
+                console.error('Hata:', data.error);
+                alert('❌ ' + data.error);
+            }
+        })
+        .catch(err => console.error('Fetch error:', err));
+    }
+
+    // Barkod okutma
+    document.getElementById('barcode').addEventListener('keypress', function(e) {
+        if (e.key !== 'Enter') return;
+        
+        const barcode = this.value.trim().toUpperCase();
+        if (!barcode || !currentShipmentId) {
+            alert('⚠️ Lütfen barkodu okutunuz!');
+            return;
+        }
+
+        fetch('{{ request.path }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `action=add_item&shipment_id=${currentShipmentId}&barcode=${encodeURIComponent(barcode)}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            const feedback = document.getElementById('scanner-feedback');
+            if (data.success) {
+                feedback.style.display = 'block';
+                feedback.style.backgroundColor = '#d4edda';
+                feedback.style.color = '#155724';
+                feedback.innerHTML = `✅ ${data.product_name} - Adet: ${data.quantity}`;
+                this.value = '';
+                updateShipmentStats();
+            } else {
+                feedback.style.display = 'block';
+                feedback.style.backgroundColor = '#ffebee';
+                feedback.style.color = '#c62828';
+                feedback.innerHTML = `❌ ${data.error}`;
+                this.value = '';
+            }
+            
+            setTimeout(() => feedback.style.display = 'none', 3000);
+        });
+
+        this.value = '';
+    });
+
+    // Koliyi kapat
+    document.getElementById('closeShipmentBtn').addEventListener('click', function() {
+        if (!confirm('Koliyi kapatmak istediğinizden emin misiniz?')) return;
+
+        fetch('{{ request.path }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `action=close_shipment&shipment_id=${currentShipmentId}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                currentShipmentStatus = 'closed';
+                alert('✅ Koli kapatıldı!');
+                updateShipmentStats();
+            } else {
+                alert('❌ ' + data.error);
+            }
+        });
+    });
+
+    // Koliyi gönder
+    document.getElementById('sendShipmentBtn').addEventListener('click', function() {
+        if (!confirm('Koliyi göndermek istediğinizden emin misiniz?')) return;
+
+        fetch('{{ request.path }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `action=send_shipment&shipment_id=${currentShipmentId}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ ' + data.message);
+                location.reload();
+            } else {
+                alert('❌ ' + data.error);
+            }
+        });
+    });
+
+    function updateShipmentStats() {
+        if (!currentShipmentId) return;
+
+        const itemsList = document.getElementById('itemsList');
+        const totalItems = document.getElementById('totalItems');
+        const uniqueProducts = document.getElementById('uniqueProducts');
+        const statusBadge = document.getElementById('statusBadge');
+        const sendBtn = document.getElementById('sendShipmentBtn');
+        const closeBtn = document.getElementById('closeShipmentBtn');
+
+        fetch('{{ request.path }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `action=load_shipment&shipment_id=${currentShipmentId}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            console.log('Load shipment response:', data);
+            if (!data.success) {
+                console.error('Load failed:', data.error);
+                alert('❌ Hata: ' + data.error);
+                return;
+            }
+            
+            currentShipmentStatus = data.status;
+            totalItems.textContent = data.total_items;
+            uniqueProducts.textContent = data.unique_products;
+            
+            // Status badge
+            const statusMap = {
+                'open': { text: '🟢 Açık', class: 'status-open' },
+                'closed': { text: '🟡 Kapalı', class: 'status-closed' },
+                'sent': { text: '✅ Gönderildi', class: 'status-sent' }
+            };
+            const status = statusMap[data.status];
+            statusBadge.innerHTML = `<div class="status-badge ${status.class}">${status.text}</div>`;
+            
+            // Buton durumları
+            closeBtn.style.display = data.status === 'open' ? 'block' : 'none';
+            sendBtn.style.display = data.status === 'closed' ? 'block' : 'none';
+            
+            // Ürünleri listele (tablo biçimi)
+            if (data.items.length === 0) {
+                itemsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">Henüz ürün eklenmemiş</div>';
+            } else {
+                let tableHTML = `
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 30%;">Ürün Adı</th>
+                                <th style="width: 15%;">Barkod</th>
+                                <th style="width: 15%;">Özel Kod</th>
+                                <th style="width: 15%;">Renk</th>
+                                <th style="width: 12%;">Fiyat</th>
+                                <th style="width: 8%;">Adet</th>
+                                <th style="width: 5%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                data.items.forEach(item => {
+                    const formattedPrice = (item.price / 100).toFixed(2) + ' ₺';
+                    tableHTML += `
+                        <tr>
+                            <td><strong>${item.product_name}</strong></td>
+                            <td>${item.barcode}</td>
+                            <td>${item.spec_code || '-'}</td>
+                            <td>${item.product_color || '-'}</td>
+                            <td>${formattedPrice}</td>
+                            <td style="text-align: center;"><span class="item-quantity">${item.quantity}</span></td>
+                            <td style="text-align: center;"><button type="button" class="btn-remove" onclick="removeItem(${item.id})">❌</button></td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += `
+                        </tbody>
+                    </table>
+                `;
+                console.log('Generated table:', tableHTML);
+                itemsList.innerHTML = tableHTML;
+            }
+        })
+        .catch(err => console.error('Fetch error:', err));
+    }
+
+    function removeItem(itemId) {
+        fetch('{{ request.path }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `action=remove_item&item_id=${itemId}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                updateShipmentStats();
+            } else {
+                alert('❌ ' + data.error);
+            }
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function selectShipment(shipmentId) {
+        currentShipmentId = shipmentId;
+
+        fetch('{{ request.path }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `action=load_shipment&shipment_id=${currentShipmentId}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('currentShipmentCode').textContent = data.shipment_code;
+                document.getElementById('currentShipmentReceiver').textContent = `→ ${data.receiver_store_name}`;
+                document.getElementById('shipmentSelector').style.display = 'block';
+                document.getElementById('barcodeSection').style.display = 'block';
+                document.getElementById('infoMsg').style.display = 'block';
+                document.getElementById('shipmentContent').style.display = 'block';
+                document.getElementById('noShipment').style.display = 'none';
+                
+                updateShipmentStats();
+                document.getElementById('barcode').focus();
+            } else {
+                alert('❌ ' + data.error);
+            }
+        });
+    }
+</script>
+
+{% endblock %}

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
+from django.db.models import Sum
 
 class Store(models.Model):
     code = models.CharField(max_length=10, primary_key=True, verbose_name=_('Mağaza Kodu'))
@@ -152,3 +153,67 @@ class StockMovement(models.Model):
 
     def __str__(self):
         return f"{self.barcode} - {self.get_movement_type_display()} ({self.quantity}) @ {self.store_code}"
+
+
+class Shipment(models.Model):
+    """
+    Koli sistemi: Mağazalar arası ürün sevkiyatı
+    """
+    STATUS_CHOICES = [
+        ('open', _('Açık')),
+        ('closed', _('Kapalı')),
+        ('sent', _('Gönderildi')),
+    ]
+
+    shipment_code = models.CharField(max_length=50, unique=True, verbose_name=_('Koli Barkodu'))
+    sender_store = models.ForeignKey(Store, on_delete=models.PROTECT, related_name='shipments_sent', verbose_name=_('Gönderen Mağaza'))
+    receiver_store = models.ForeignKey(Store, on_delete=models.PROTECT, related_name='shipments_received', verbose_name=_('Alan Mağaza'))
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open', verbose_name=_('Durum'))
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, verbose_name=_('Oluşturan'))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Oluşturma Tarihi'))
+    closed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Kapanış Tarihi'))
+    sent_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Gönderim Tarihi'))
+
+    class Meta:
+        verbose_name = _('Koli')
+        verbose_name_plural = _('Koliler')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['shipment_code']),
+            models.Index(fields=['sender_store', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.shipment_code} ({self.sender_store.code} → {self.receiver_store.code}) - {self.get_status_display()}"
+
+    @property
+    def item_count(self):
+        """Kolideki toplam ürün adedi"""
+        return self.items.aggregate(total=Sum('quantity'))['total'] or 0
+
+    @property
+    def unique_products(self):
+        """Kolideki benzersiz ürün sayısı"""
+        return self.items.count()
+
+
+class ShipmentItem(models.Model):
+    """
+    Koliye ait ürünler
+    """
+    shipment = models.ForeignKey(Shipment, on_delete=models.CASCADE, related_name='items', verbose_name=_('Koli'))
+    barcode = models.CharField(max_length=50, verbose_name=_('Barkod'))
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, null=True, blank=True, verbose_name=_('Ürün'))
+    quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)], verbose_name=_('Miktar'))
+    added_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Ekleme Tarihi'))
+
+    class Meta:
+        verbose_name = _('Koli Ürünü')
+        verbose_name_plural = _('Koli Ürünleri')
+        ordering = ['-added_at']
+        indexes = [
+            models.Index(fields=['shipment', 'barcode']),
+        ]
+
+    def __str__(self):
+        return f"{self.barcode} x{self.quantity} - {self.shipment.shipment_code}"

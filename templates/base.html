@@ -109,17 +109,19 @@
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-content">
-            <div class="sidebar-header">📋 Menü</div>
+            <div class="sidebar-header">
+                <h2 align="right">Menü</h2>
+            </div>
             <button class="sidebar-btn" onclick="closeSidebarAndGo('/products/');">
                 <i class="fas fa-search"></i> Ürün Tarayıcı
             </button>
             <button class="sidebar-btn" onclick="closeSidebarAndGo('/warehouse-shelf/');">
                 <i class="fas fa-warehouse"></i> Stok Hareket
             </button>
-            <button class="sidebar-btn" id="btnC">
+            <button class="sidebar-btn" id="btnC" onclick="closeSidebarAndGo('/warehouse-acceptance/');">
                 <i class="fas fa-cube"></i> Depo Kabul
             </button>
-            <button class="sidebar-btn" id="btnD">
+            <button class="sidebar-btn" id="btnD" onclick="closeSidebarAndGo('/warehouse-shipment/');">
                 <i class="fas fa-cube"></i> Depo Sevk
             </button>
             {% if user.is_superuser or user.profile.role == 'admin' %}

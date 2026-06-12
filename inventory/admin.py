@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Store, Product, Stock, UserProfile, StockMovement
+from .models import Store, Product, Stock, UserProfile, StockMovement, Shipment, ShipmentItem
 
 
 class UserProfileInline(admin.StackedInline):
@@ -177,5 +177,71 @@ class StockMovementAdmin(admin.ModelAdmin):
         try:
             store_code = request.user.profile.store_code
             return qs.filter(store_code=store_code)
+        except:
+            return qs.none()
+
+
+class ShipmentItemInline(admin.TabularInline):
+    model = ShipmentItem
+    fields = ('barcode', 'product', 'quantity', 'added_at')
+    readonly_fields = ('added_at',)
+    extra = 0
+
+
+@admin.register(Shipment)
+class ShipmentAdmin(admin.ModelAdmin):
+    list_display = ('shipment_code', 'sender_store', 'receiver_store', 'status', 'item_count', 'unique_products', 'created_by', 'created_at')
+    list_filter = ('status', 'sender_store', 'receiver_store', 'created_at')
+    search_fields = ('shipment_code', 'sender_store__code', 'receiver_store__code')
+    readonly_fields = ('created_by', 'created_at', 'closed_at', 'sent_at')
+    inlines = [ShipmentItemInline]
+    
+    fieldsets = (
+        ('Koli Bilgisi', {
+            'fields': ('shipment_code', 'status')
+        }),
+        ('Mağazalar', {
+            'fields': ('sender_store', 'receiver_store')
+        }),
+        ('Sistem Bilgisi', {
+            'fields': ('created_by', 'created_at', 'closed_at', 'sent_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        try:
+            store_code = request.user.profile.store_code
+            return qs.filter(sender_store__code=store_code)
+        except:
+            return qs.none()
+
+
+@admin.register(ShipmentItem)
+class ShipmentItemAdmin(admin.ModelAdmin):
+    list_display = ('barcode', 'get_shipment_code', 'quantity', 'added_at')
+    list_filter = ('shipment__status', 'added_at')
+    search_fields = ('barcode', 'shipment__shipment_code')
+    readonly_fields = ('added_at',)
+    
+    def get_shipment_code(self, obj):
+        return obj.shipment.shipment_code
+    get_shipment_code.short_description = 'Koli'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        try:
+            store_code = request.user.profile.store_code
+            return qs.filter(shipment__sender_store__code=store_code)
         except:
             return qs.none()

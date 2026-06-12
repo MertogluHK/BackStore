@@ -14,6 +14,9 @@ urlpatterns = [
     # Warehouse - Shelf
     path('warehouse-shelf/', views.warehouse_shelf, name='warehouse_shelf'),
     
+    # Warehouse - Shipment
+    path('warehouse-shipment/', views.warehouse_shipment, name='warehouse_shipment'),
+    
     # Admin Panel
     path('admin-panel/', views.admin_panel, name='admin_panel'),
     path('admin-panel/users/', views.admin_users, name='admin_users'),
