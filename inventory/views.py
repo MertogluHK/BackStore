@@ -403,6 +403,136 @@ def warehouse_shelf(request):
 
 
 @login_required(login_url='login')
+def warehouse_acceptance(request):
+    """
+    Gelen koli kabulü: Başka mağazadan gönderilen sevkiyatları kabul et
+    """
+    try:
+        profile = request.user.profile
+    except UserProfile.DoesNotExist:
+        messages.error(request, '❌ Kullanıcı profili bulunamadı.')
+        return redirect('dashboard')
+
+    if not profile.store_code:
+        messages.error(request, '❌ Bir mağazaya atanmamışsınız.')
+        return redirect('dashboard')
+
+    receiver_store_code = profile.store_code
+    try:
+        receiver_store = Store.objects.get(code=receiver_store_code)
+    except Store.DoesNotExist:
+        messages.error(request, '❌ Mağaza bulunamadı.')
+        return redirect('dashboard')
+
+    pending_shipments = Shipment.objects.filter(
+        receiver_store__code=receiver_store_code,
+        status='sent'
+    ).order_by('-sent_at')
+
+    accepted_shipments = Shipment.objects.filter(
+        receiver_store__code=receiver_store_code,
+        status='received'
+    ).order_by('-received_at')[:10]
+
+    context = {
+        'receiver_store': receiver_store,
+        'pending_shipments': pending_shipments,
+        'accepted_shipments': accepted_shipments,
+    }
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+
+        if action == 'load_shipment':
+            try:
+                shipment_id = request.POST.get('shipment_id')
+                shipment = Shipment.objects.get(
+                    id=shipment_id,
+                    receiver_store__code=receiver_store_code,
+                    status__in=['sent', 'received']
+                )
+
+                items = []
+                for item in shipment.items.all():
+                    items.append({
+                        'id': item.id,
+                        'product_name': item.product.prodName if item.product else '-',
+                        'product_size': item.product.sizeAge if item.product else '-',
+                        'product_color': item.product.colour if item.product else '-',
+                        'spec_code': item.product.specCode if item.product else '-',
+                        'barcode': item.barcode,
+                        'quantity': item.quantity,
+                        'price': item.product.price if item.product else 0,
+                    })
+
+                return JsonResponse({
+                    'success': True,
+                    'shipment_id': shipment.id,
+                    'shipment_code': shipment.shipment_code,
+                    'sender_store_name': shipment.sender_store.name,
+                    'sender_store_code': shipment.sender_store.code,
+                    'status': shipment.status,
+                    'total_items': shipment.item_count,
+                    'unique_products': shipment.unique_products,
+                    'sent_at': shipment.sent_at.strftime('%d.%m.%Y %H:%M') if shipment.sent_at else '-',
+                    'items': items,
+                })
+            except Shipment.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Koli bulunamadı.'})
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': str(e)})
+
+        elif action == 'accept_shipment':
+            shipment_id = request.POST.get('shipment_id')
+
+            try:
+                shipment = Shipment.objects.get(
+                    id=shipment_id,
+                    receiver_store__code=receiver_store_code,
+                    status='sent'
+                )
+            except Shipment.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Kabul edilecek koli bulunamadı.'})
+
+            if shipment.item_count == 0:
+                return JsonResponse({'success': False, 'error': 'Boş koli kabul edilemez.'})
+
+            with transaction.atomic():
+                for item in shipment.items.all():
+                    warehouse_stock, _ = Stock.objects.get_or_create(
+                        barcode=item.barcode,
+                        store_code=receiver_store_code,
+                        location='warehouse',
+                        defaults={'quantity': 0}
+                    )
+                    warehouse_stock.quantity += item.quantity
+                    warehouse_stock.save()
+
+                    StockMovement.objects.create(
+                        barcode=item.barcode,
+                        store_code=receiver_store_code,
+                        movement_type='in',
+                        quantity=item.quantity,
+                        from_location='warehouse',
+                        to_location='warehouse',
+                        location='warehouse',
+                        created_by=request.user,
+                        notes=f'Koli kabul: {shipment.shipment_code} | {shipment.sender_store.code} → {receiver_store_code}'
+                    )
+
+                shipment.status = 'received'
+                shipment.received_at = timezone.now()
+                shipment.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Koli kabul edildi. Toplam {shipment.item_count} ürün depoya eklendi.'
+            })
+
+    return render(request, 'inventory/warehouse_acceptance.html', context)
+
+
+@login_required(login_url='login')
 def warehouse_shipment(request):
     """
     Koli sistemi ile mağaza ↔ mağaza stok transferi
@@ -676,18 +806,7 @@ def warehouse_shipment(request):
                         take = min(warehouse_stock.quantity, remaining)
                         warehouse_stock.quantity -= take
                         warehouse_stock.save()
-                    
-                    # Alıcı mağazaya ekle
-                    receiver_warehouse_stock, _ = Stock.objects.get_or_create(
-                        barcode=item.barcode,
-                        store_code=shipment.receiver_store.code,
-                        location='warehouse',
-                        defaults={'quantity': 0}
-                    )
-                    receiver_warehouse_stock.quantity += item.quantity
-                    receiver_warehouse_stock.save()
-                    
-                    # Hareket kaydı
+
                     StockMovement.objects.create(
                         barcode=item.barcode,
                         store_code=sender_store_code,

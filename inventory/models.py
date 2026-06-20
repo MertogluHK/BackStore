@@ -163,6 +163,7 @@ class Shipment(models.Model):
         ('open', _('Açık')),
         ('closed', _('Kapalı')),
         ('sent', _('Gönderildi')),
+        ('received', _('Kabul Edildi')),
     ]
 
     shipment_code = models.CharField(max_length=50, unique=True, verbose_name=_('Koli Barkodu'))
@@ -173,6 +174,7 @@ class Shipment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Oluşturma Tarihi'))
     closed_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Kapanış Tarihi'))
     sent_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Gönderim Tarihi'))
+    received_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Kabul Tarihi'))
 
     class Meta:
         verbose_name = _('Koli')

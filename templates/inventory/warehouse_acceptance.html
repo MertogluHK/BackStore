@@ -1,0 +1,498 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Depo Kabul - BackStore{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        padding-top: 80px;
+    }
+
+    .container-main {
+        max-width: 1400px;
+        margin: 30px auto;
+        padding: 0 20px;
+    }
+
+    .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .store-info {
+        background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.2);
+    }
+
+    .store-info-label {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        opacity: 0.9;
+        margin-bottom: 5px;
+    }
+
+    .store-info-value {
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+
+    .panel {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+
+    .panel-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #27ae60;
+    }
+
+    .shipment-info {
+        background: #f8f9fa;
+        border-left: 4px solid #27ae60;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+
+    .shipment-code {
+        font-size: 16px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+
+    .shipment-meta {
+        font-size: 12px;
+        color: #7f8c8d;
+    }
+
+    .items-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .items-table thead {
+        background: #f8f9fa;
+        position: sticky;
+        top: 0;
+    }
+
+    .items-table th {
+        padding: 10px 8px;
+        text-align: left;
+        font-weight: 600;
+        color: #2c3e50;
+        border-bottom: 2px solid #ddd;
+    }
+
+    .items-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .items-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .items-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+
+    .item-quantity {
+        background: #27ae60;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        min-width: 50px;
+        text-align: center;
+        display: inline-block;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+
+    .status-sent {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .status-received {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .stat {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: #7f8c8d;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-top: 5px;
+    }
+
+    .btn {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        width: 100%;
+    }
+
+    .btn-success {
+        background-color: #27ae60;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #229954;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+    }
+
+    .shipments-list {
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 2px solid #eee;
+    }
+
+    .shipment-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .shipment-card:hover {
+        box-shadow: 0 8px 20px rgba(39, 174, 96, 0.2);
+        border-color: #27ae60;
+    }
+
+    .shipment-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .shipment-card-title {
+        font-weight: 700;
+        color: #2c3e50;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #7f8c8d;
+    }
+
+    .alert-info {
+        background-color: #e8f8f0;
+        color: #1e8449;
+        border-left: 4px solid #27ae60;
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="container-main">
+    <h1 class="page-title">📥 Depo Kabul</h1>
+
+    <div class="store-info">
+        <div class="store-info-label">🏪 Alıcı Depo (Mağazanız)</div>
+        <div class="store-info-value">
+            {{ receiver_store.code }} - {{ receiver_store.name }}
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <div class="panel">
+            <div class="panel-title">📋 Bekleyen Koliler</div>
+
+            {% if pending_shipments %}
+                {% for shipment in pending_shipments %}
+                <div class="shipment-card" onclick="selectShipment({{ shipment.id }})">
+                    <div class="shipment-card-header">
+                        <div>
+                            <div class="shipment-card-title">{{ shipment.shipment_code }}</div>
+                            <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
+                                ← {{ shipment.sender_store.code }} - {{ shipment.sender_store.name }} | {{ shipment.item_count }} ürün
+                            </div>
+                            {% if shipment.sent_at %}
+                            <div style="font-size: 11px; color: #95a5a6; margin-top: 3px;">
+                                Gönderim: {{ shipment.sent_at|date:"d.m.Y H:i" }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="status-badge status-sent">🚚 Yolda</div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <p>📭 Bekleyen koli yok</p>
+                    <p style="font-size: 12px;">Başka mağazadan gönderilen koliler burada görünecek</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">📦 Koli Detayı</div>
+
+            <div id="shipmentContent" style="display:none;">
+                <div class="shipment-info">
+                    <div class="shipment-code" id="currentShipmentCode">-</div>
+                    <div class="shipment-meta" id="currentShipmentSender">-</div>
+                    <div class="shipment-meta" id="currentShipmentSentAt">-</div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-label">Toplam Ürün</div>
+                        <div class="stat-value" id="totalItems">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Benzersiz Ürün</div>
+                        <div class="stat-value" id="uniqueProducts">0</div>
+                    </div>
+                </div>
+
+                <div id="statusBadge"></div>
+
+                <div class="items-list" id="itemsList">
+                    <div style="padding: 20px; text-align: center; color: #7f8c8d;">
+                        Ürün listesi yükleniyor...
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-success" id="acceptShipmentBtn" style="display:none;">
+                    ✅ Koliyi Kabul Et
+                </button>
+            </div>
+
+            <div id="noShipment" class="empty-state">
+                <p>📋 Koli seçili değil</p>
+                <p style="font-size: 12px;">Soldan kabul edilecek koliyi seçiniz</p>
+            </div>
+        </div>
+    </div>
+
+    {% if accepted_shipments %}
+    <div class="shipments-list">
+        <h3 style="font-size: 20px; font-weight: 700; color: #2c3e50; margin-bottom: 20px;">✅ Son Kabul Edilen Koliler</h3>
+
+        {% for shipment in accepted_shipments %}
+        <div class="shipment-card" onclick="selectShipment({{ shipment.id }})">
+            <div class="shipment-card-header">
+                <div>
+                    <div class="shipment-card-title">{{ shipment.shipment_code }}</div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
+                        ← {{ shipment.sender_store.code }} | {{ shipment.item_count }} ürün
+                    </div>
+                </div>
+                <div class="status-badge status-received">✅ Kabul Edildi</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    let currentShipmentId = null;
+    let currentShipmentStatus = null;
+
+    function selectShipment(shipmentId) {
+        currentShipmentId = shipmentId;
+        loadShipmentDetails();
+    }
+
+    function loadShipmentDetails() {
+        if (!currentShipmentId) return;
+
+        fetch('{{ request.path }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `action=load_shipment&shipment_id=${currentShipmentId}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                alert('❌ ' + data.error);
+                return;
+            }
+
+            currentShipmentStatus = data.status;
+
+            document.getElementById('currentShipmentCode').textContent = data.shipment_code;
+            document.getElementById('currentShipmentSender').textContent =
+                `← ${data.sender_store_code} - ${data.sender_store_name}`;
+            document.getElementById('currentShipmentSentAt').textContent =
+                `Gönderim: ${data.sent_at}`;
+
+            document.getElementById('totalItems').textContent = data.total_items;
+            document.getElementById('uniqueProducts').textContent = data.unique_products;
+
+            const statusMap = {
+                'sent': { text: '🚚 Yolda - Kabul Bekliyor', class: 'status-sent' },
+                'received': { text: '✅ Kabul Edildi', class: 'status-received' }
+            };
+            const status = statusMap[data.status] || statusMap['sent'];
+            document.getElementById('statusBadge').innerHTML =
+                `<div class="status-badge ${status.class}">${status.text}</div>`;
+
+            document.getElementById('acceptShipmentBtn').style.display =
+                data.status === 'sent' ? 'block' : 'none';
+
+            const itemsList = document.getElementById('itemsList');
+            if (data.items.length === 0) {
+                itemsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">Kolide ürün yok</div>';
+            } else {
+                let tableHTML = `
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Ürün Adı</th>
+                                <th>Barkod</th>
+                                <th>Özel Kod</th>
+                                <th>Renk</th>
+                                <th>Adet</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                data.items.forEach(item => {
+                    tableHTML += `
+                        <tr>
+                            <td><strong>${item.product_name}</strong></td>
+                            <td>${item.barcode}</td>
+                            <td>${item.spec_code || '-'}</td>
+                            <td>${item.product_color || '-'}</td>
+                            <td style="text-align: center;"><span class="item-quantity">${item.quantity}</span></td>
+                        </tr>
+                    `;
+                });
+
+                tableHTML += '</tbody></table>';
+                itemsList.innerHTML = tableHTML;
+            }
+
+            document.getElementById('shipmentContent').style.display = 'block';
+            document.getElementById('noShipment').style.display = 'none';
+        })
+        .catch(err => console.error('Fetch error:', err));
+    }
+
+    document.getElementById('acceptShipmentBtn').addEventListener('click', function() {
+        if (!confirm('Koliyi kabul etmek istediğinizden emin misiniz? Ürünler depoya eklenecek.')) return;
+
+        fetch('{{ request.path }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `action=accept_shipment&shipment_id=${currentShipmentId}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ ' + data.message);
+                location.reload();
+            } else {
+                alert('❌ ' + data.error);
+            }
+        });
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+
+{% endblock %}
