@@ -145,6 +145,7 @@ def product_browser(request):
     selected_product = None
     product_variants = []
     variant_stocks = {}
+    multiple_fields_error = False
 
     # Kullanıcının mağazasını al
     user_store_code = None
@@ -158,8 +159,16 @@ def product_browser(request):
     barcode = request.GET.get('barcode', '').strip()
     prod_name = request.GET.get('prod_name', '').strip()
 
+    # Kaç alanın doldurulduğunu kontrol et
+    filled_fields_count = (1 if spec_code else 0) + (1 if barcode else 0) + (1 if prod_name else 0)
+
+    # Birden fazla alan doldurulduysa hata göster
+    if filled_fields_count > 1:
+        multiple_fields_error = True
+        searched = True
+        no_results = True
     # En az bir arama parametresi varsa arama yap
-    if spec_code or barcode or prod_name:
+    elif filled_fields_count > 0:
         searched = True
         
         # Arama yap
@@ -268,6 +277,7 @@ def product_browser(request):
         'grouped_results': grouped_results,
         'searched': searched,
         'no_results': no_results,
+        'multiple_fields_error': multiple_fields_error,
         'spec_code': spec_code,
         'barcode': barcode,
         'prod_name': prod_name,
@@ -528,6 +538,8 @@ def warehouse_acceptance(request):
                 'success': True,
                 'message': f'Koli kabul edildi. Toplam {shipment.item_count} ürün depoya eklendi.'
             })
+        else:
+            return JsonResponse({'success': False, 'error': 'Geçersiz işlem türü.'})
 
     return render(request, 'inventory/warehouse_acceptance.html', context)
 
@@ -563,16 +575,22 @@ def warehouse_shipment(request):
     # Alıcı mağaza seçenekleri
     available_stores = Store.objects.filter(is_active=True).exclude(code=sender_store_code)
     
-    # Aktif koli (açık ve kapalı durumda)
+    # Aktif koli (açık, kapalı ve gönderildi durumda)
     active_shipments = Shipment.objects.filter(
         sender_store__code=sender_store_code,
-        status__in=['open', 'closed']
+        status__in=['open', 'closed', 'sent']
     ).order_by('-created_at')
+    open_shipments_count = active_shipments.filter(status='open').count()
+    closed_shipments_count = active_shipments.filter(status='closed').count()
+    sent_shipments_count = active_shipments.filter(status='sent').count()
     
     context = {
         'sender_store': sender_store,
         'available_stores': available_stores,
         'active_shipments': active_shipments,
+        'open_shipments_count': open_shipments_count,
+        'closed_shipments_count': closed_shipments_count,
+        'sent_shipments_count': sent_shipments_count,
     }
     
     # POST işlemleri (AJAX istekleri)
@@ -593,13 +611,13 @@ def warehouse_shipment(request):
                 for item in shipment.items.all():
                     items.append({
                         'id': item.id,
-                        'product_name': item.product.prodName,
-                        'product_size': item.product.sizeAge,
-                        'product_color': item.product.colour,
-                        'spec_code': item.product.specCode,
+                        'product_name': item.product.prodName if item.product else '',
+                        'product_size': item.product.sizeAge if item.product else '',
+                        'product_color': item.product.colour if item.product else '',
+                        'spec_code': item.product.specCode if item.product else '',
                         'barcode': item.barcode,
                         'quantity': item.quantity,
-                        'price': item.product.price or 0
+                        'price': (item.product.price if item.product else 0) or 0
                     })
                 
                 print(f"DEBUG: {len(items)} ürün bulundu")
@@ -649,12 +667,15 @@ def warehouse_shipment(request):
                 created_by=request.user
             )
             
-            from django.http import JsonResponse
             return JsonResponse({
                 'success': True,
                 'shipment_id': shipment.id,
                 'shipment_code': shipment.shipment_code,
-                'receiver_store_name': receiver_store.name
+                'receiver_store_name': receiver_store.name,
+                'status': shipment.status,
+                'total_items': shipment.item_count,
+                'unique_products': shipment.unique_products,
+                'items': []
             })
         
         # 2. Koliye ürün ekle
@@ -679,20 +700,31 @@ def warehouse_shipment(request):
             except Product.DoesNotExist:
                 return JsonResponse({'success': False, 'error': f'Barkod "{barcode}" sisteme kayıtlı değil.'})
             
-            # Stok kontrol
+            # Stok kontrol - Depo stoğunu kontrol et, sonra reyon stoğunu
             from django.db.models import Sum
             stock_in_shipment = ShipmentItem.objects.filter(
                 shipment=shipment,
                 barcode=barcode
             ).aggregate(total=Sum('quantity'))['total'] or 0
             
-            available_stock = Stock.objects.filter(
+            # Depo stoğu
+            warehouse_stock = Stock.objects.filter(
                 barcode=barcode,
-                store_code=sender_store_code
+                store_code=sender_store_code,
+                location='warehouse'
             ).aggregate(total=Sum('quantity'))['total'] or 0
             
-            if available_stock - stock_in_shipment <= 0:
-                return JsonResponse({'success': False, 'error': f'Stok yetersiz. Mevcut: {available_stock - stock_in_shipment}'})
+            # Reyon stoğu
+            shelf_stock = Stock.objects.filter(
+                barcode=barcode,
+                store_code=sender_store_code,
+                location='shelf'
+            ).aggregate(total=Sum('quantity'))['total'] or 0
+            
+            total_available_stock = warehouse_stock + shelf_stock
+            
+            if total_available_stock - stock_in_shipment <= 0:
+                return JsonResponse({'success': False, 'error': 'Bu ürün mağazada mevcut değil.'})
             
             # Koliye ürün ekle ya da miktarını artır
             item, created = ShipmentItem.objects.get_or_create(
@@ -701,21 +733,36 @@ def warehouse_shipment(request):
                 defaults={'product': product, 'quantity': 1}
             )
             
+            if item.product is None:
+                item.product = product
+            
             if not created:
                 item.quantity += 1
-                item.save()
+            item.save()
             
-            from django.http import JsonResponse
+            # Return the refreshed shipment state from the database
+            items = []
+            for shipment_item in shipment.items.select_related('product').all():
+                items.append({
+                    'id': shipment_item.id,
+                    'product_name': shipment_item.product.prodName if shipment_item.product else '',
+                    'product_size': shipment_item.product.sizeAge if shipment_item.product else '',
+                    'product_color': shipment_item.product.colour if shipment_item.product else '',
+                    'spec_code': shipment_item.product.specCode if shipment_item.product else '',
+                    'barcode': shipment_item.barcode,
+                    'quantity': shipment_item.quantity,
+                    'price': (shipment_item.product.price if shipment_item.product else 0) or 0
+                })
+            
             return JsonResponse({
                 'success': True,
-                'item_id': item.id,
-                'product_name': product.prodName,
-                'product_size': product.sizeAge,
-                'product_color': product.colour,
-                'spec_code': product.specCode,
-                'barcode': barcode,
-                'price': product.price or 0,
-                'quantity': item.quantity
+                'shipment_id': shipment.id,
+                'shipment_code': shipment.shipment_code,
+                'receiver_store_name': shipment.receiver_store.name,
+                'status': shipment.status,
+                'total_items': shipment.item_count,
+                'unique_products': shipment.unique_products,
+                'items': items
             })
         
         # 3. Koliden ürün çıkart
@@ -738,7 +785,6 @@ def warehouse_shipment(request):
                 item.delete()
                 quantity = 0
             
-            from django.http import JsonResponse
             return JsonResponse({
                 'success': True,
                 'quantity': quantity
@@ -760,7 +806,6 @@ def warehouse_shipment(request):
             shipment.closed_at = timezone.now()
             shipment.save()
             
-            from django.http import JsonResponse
             return JsonResponse({'success': True, 'message': 'Koli kapatıldı.'})
         
         # 5. Koliyi gönder
@@ -781,31 +826,33 @@ def warehouse_shipment(request):
             # Transfer işlemi
             with transaction.atomic():
                 for item in shipment.items.all():
-                    # Gönderen mağazadan çıkart
-                    shelf_stock = Stock.objects.filter(
-                        barcode=item.barcode,
-                        store_code=sender_store_code,
-                        location='shelf'
-                    ).first()
-                    
+                    # Gönderen mağazadan çıkart - ÖNCELİK: Depo stoğu → Reyon stoğu
                     warehouse_stock = Stock.objects.filter(
                         barcode=item.barcode,
                         store_code=sender_store_code,
                         location='warehouse'
                     ).first()
                     
+                    shelf_stock = Stock.objects.filter(
+                        barcode=item.barcode,
+                        store_code=sender_store_code,
+                        location='shelf'
+                    ).first()
+                    
                     remaining = item.quantity
                     
-                    if shelf_stock and shelf_stock.quantity > 0:
-                        take = min(shelf_stock.quantity, remaining)
-                        shelf_stock.quantity -= take
-                        shelf_stock.save()
-                        remaining -= take
-                    
-                    if remaining > 0 and warehouse_stock and warehouse_stock.quantity > 0:
+                    # İlk olarak depo stoğundan al
+                    if warehouse_stock and warehouse_stock.quantity > 0:
                         take = min(warehouse_stock.quantity, remaining)
                         warehouse_stock.quantity -= take
                         warehouse_stock.save()
+                        remaining -= take
+                    
+                    # Eksik kısmı reyon stoğundan al
+                    if remaining > 0 and shelf_stock and shelf_stock.quantity > 0:
+                        take = min(shelf_stock.quantity, remaining)
+                        shelf_stock.quantity -= take
+                        shelf_stock.save()
 
                     StockMovement.objects.create(
                         barcode=item.barcode,
@@ -824,11 +871,27 @@ def warehouse_shipment(request):
                 shipment.sent_at = timezone.now()
                 shipment.save()
             
-            from django.http import JsonResponse
             return JsonResponse({
                 'success': True,
                 'message': f'Koli başarıyla gönderildi. Toplam {shipment.item_count} ürün aktarıldı.'
             })
+        
+        # 6. Açık koli sil
+        elif action == 'delete_shipment':
+            shipment_id = request.POST.get('shipment_id')
+            
+            try:
+                shipment = Shipment.objects.get(id=shipment_id, sender_store__code=sender_store_code)
+            except Shipment.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Koli bulunamadı.'})
+
+            if shipment.status != 'open':
+                return JsonResponse({'success': False, 'error': 'Sadece açık koli silinebilir.'})
+
+            with transaction.atomic():
+                shipment.delete()
+
+            return JsonResponse({'success': True, 'message': 'Açık koli başarıyla silindi.'})
     
     return render(request, 'inventory/warehouse_shipment.html', context)
 

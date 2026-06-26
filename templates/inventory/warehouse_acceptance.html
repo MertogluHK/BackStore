@@ -294,7 +294,7 @@
                             </div>
                             {% endif %}
                         </div>
-                        <div class="status-badge status-sent">🚚 Yolda</div>
+                        <div class="status-badge status-sent">Kabul Bekleniyor</div>
                     </div>
                 </div>
                 {% endfor %}
@@ -371,6 +371,7 @@
 <script>
     let currentShipmentId = null;
     let currentShipmentStatus = null;
+    const initialPendingShipmentId = {% if pending_shipments %}{{ pending_shipments.0.id }}{% else %}null{% endif %};
 
     function selectShipment(shipmentId) {
         currentShipmentId = shipmentId;
@@ -407,7 +408,7 @@
             document.getElementById('uniqueProducts').textContent = data.unique_products;
 
             const statusMap = {
-                'sent': { text: '🚚 Yolda - Kabul Bekliyor', class: 'status-sent' },
+                'sent': { text: 'Kabul Bekleniyor', class: 'status-sent' },
                 'received': { text: '✅ Kabul Edildi', class: 'status-received' }
             };
             const status = statusMap[data.status] || statusMap['sent'];
@@ -477,6 +478,12 @@
                 alert('❌ ' + data.error);
             }
         });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (initialPendingShipmentId) {
+            selectShipment(initialPendingShipmentId);
+        }
     });
 
     function getCookie(name) {

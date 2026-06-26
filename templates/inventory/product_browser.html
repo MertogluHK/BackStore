@@ -233,13 +233,15 @@
     }
 
     .modal-content {
-        background: white;
-        border-radius: 12px;
-        padding: 40px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        text-align: center;
-        animation: slideUp 0.3s ease;
-    }
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    width: 450px;
+    max-width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    animation: slideUp 0.3s ease;
+}
 
     @keyframes slideUp {
         from {
@@ -368,7 +370,16 @@
 
         <!-- Sağ Panel: Arama Sonuçları -->
         <div class="results-panel">
-            {% if searched %}
+            {% if multiple_fields_error %}
+                <!-- Birden Fazla Alan Dolduruldu Modal -->
+                <div class="modal-overlay show" id="multipleFieldsErrorModal">
+                    <div class="modal-content">
+                        <h2>❌ Geçersiz Arama</h2>
+                        <p>Lütfen sadece <strong>bir alanı</strong> doldurarak arama yapın.
+                        <button type="button" class="modal-btn" onclick="resetForm()">Tamam</button>
+                    </div>
+                </div>
+            {% elif searched %}
                 {% if show_color_selector %}
                     <!-- Renk Seçim Ekranı -->
                     <div class="color-selector">
@@ -569,6 +580,15 @@
     </div>
 </form>
 
+<!-- Birden Fazla Alan Dolduruldu Modal -->
+<div class="modal-overlay" id="multipleFieldsModal">
+    <div class="modal-content">
+        <h2>❌ Geçersiz Arama</h2>
+        <p>Lütfen sadece <strong>bir alanı</strong> doldurarak arama yapın.<br><br>
+        <button type="button" class="modal-btn" onclick="closeModal()">Tamam</button>
+    </div>
+</div>
+
 <script>
     // Form validation
     document.getElementById('searchForm')?.addEventListener('submit', function(e) {
@@ -576,14 +596,32 @@
         const barcode = document.getElementById('barcode').value.trim();
         const prodName = document.getElementById('prod_name').value.trim();
 
+        // Kaç alanın doldurulduğunu kontrol et
+        const filledFieldsCount = (specCode ? 1 : 0) + (barcode ? 1 : 0) + (prodName ? 1 : 0);
+
         // En az bir alan doldurulmadıysa uyarı göster
-        if (!specCode && !barcode && !prodName) {
+        if (filledFieldsCount === 0) {
             e.preventDefault();
             
             // Kutuları kırmızı yapmak için error class'ı ekle
             document.getElementById('spec_code').parentElement.classList.add('error');
             document.getElementById('barcode').parentElement.classList.add('error');
             document.getElementById('prod_name').parentElement.classList.add('error');
+            
+            return false;
+        }
+
+        // Birden fazla alan doldurulduysa uyarı göster
+        if (filledFieldsCount > 1) {
+            e.preventDefault();
+            
+            // Tüm kutuları kırmızı yapmak için error class'ı ekle
+            document.getElementById('spec_code').parentElement.classList.add('error');
+            document.getElementById('barcode').parentElement.classList.add('error');
+            document.getElementById('prod_name').parentElement.classList.add('error');
+            
+            // Uyarı modal'ı göster
+            showMultipleFieldsModal();
             
             return false;
         }
@@ -614,11 +652,47 @@
         if (modal) {
             modal.classList.remove('show');
         }
+        const multipleFieldsModal = document.getElementById('multipleFieldsModal');
+        if (multipleFieldsModal) {
+            multipleFieldsModal.classList.remove('show');
+        }
+        const multipleFieldsErrorModal = document.getElementById('multipleFieldsErrorModal');
+        if (multipleFieldsErrorModal) {
+            multipleFieldsErrorModal.classList.remove('show');
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('spec_code').value = '';
+        document.getElementById('barcode').value = '';
+        document.getElementById('prod_name').value = '';
+        closeModal();
+        // Sayfayı temiz duruma getir
+        window.location.href = window.location.pathname;
+    }
+
+    function showMultipleFieldsModal() {
+        const modal = document.getElementById('multipleFieldsModal');
+        if (modal) {
+            modal.classList.add('show');
+        }
     }
 
     document.getElementById('noResultsModal')?.addEventListener('click', function(e) {
         if (e.target === this) {
             closeModal();
+        }
+    });
+
+    document.getElementById('multipleFieldsModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeModal();
+        }
+    });
+
+    document.getElementById('multipleFieldsErrorModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            resetForm();
         }
     });
 

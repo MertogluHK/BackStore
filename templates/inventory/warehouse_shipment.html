@@ -377,115 +377,136 @@
 </style>
 
 <div class="container-main">
-    <h1 class="page-title">📦 Depo Sevk - Koli Sistemi</h1>
+    <h1 class="page-title">📦 Depo Sevk</h1>
 
-    <!-- Gönderen Depo Bilgisi -->
-    <div class="store-info">
-        <div class="store-info-label">🏪 Gönderen Depo (Mağazanız)</div>
-        <div class="store-info-value">
-            {{ sender_store.code }} - {{ sender_store.name }}
+    <!-- Başlangıç Ekranı: Sadece Mağaza Seçimi -->
+    <div id="welcomeScreen" class="panel" style="max-width: 500px; margin: 60px auto; padding: 40px; text-align: center; display: block;">
+        <div style="margin-bottom: 30px;">
+            <p style="font-size: 16px; color: #7f8c8d; margin-bottom: 10px;">🏪 Gönderen Depo (Mağazanız)</p>
+            <p style="font-size: 20px; font-weight: 700; color: #2c3e50;">{{ sender_store.code }} - {{ sender_store.name }}</p>
+        </div>
+
+        <div class="form-group">
+            <label for="receiver_store" style="font-size: 16px; font-weight: 700;">📍 Alıcı Depo Seçiniz</label>
+            <select id="receiver_store" required onchange="autoCreateShipment()">
+                <option value="">-- Depo Seçiniz --</option>
+                {% for store in available_stores %}
+                    <option value="{{ store.code }}">{{ store.code }} - {{ store.name }}</option>
+                {% endfor %}
+            </select>
         </div>
     </div>
 
-    <!-- Ana İçerik -->
-    <div class="content-grid">
-        <!-- Sol Panel: Koli Oluştur ve Ürün Okut -->
-        <div class="panel">
-            <div class="panel-title">🔖 Koli Oluştur & Ürün Ekle</div>
-
-            <!-- Alıcı Mağaza Seçimi -->
-            <div class="form-group">
-                <label for="receiver_store">📍 Alıcı Depo Seçiniz</label>
-                <select id="receiver_store" required onchange="autoCreateShipment()">
-                    <option value="">-- Seçiniz --</option>
-                    {% for store in available_stores %}
-                        <option value="{{ store.code }}">{{ store.code }} - {{ store.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <!-- Koli Seçimi (Otomatik oluşturulduktan sonra görünecek) -->
-            <div id="shipmentSelector" style="display:none; margin-bottom: 20px;">
-                <div class="shipment-info">
-                    <div class="shipment-code" id="currentShipmentCode">-</div>
-                    <div class="shipment-meta" id="currentShipmentReceiver">-</div>
+    <!-- Koli Paneli -->
+    <div id="shipmentModal" style="position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); z-index: 1300; padding: 20px; overflow: auto;">
+        <div style="width: 100%; max-width: 900px; max-height: calc(100vh - 60px); background: white; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.22); display: flex; flex-direction: column; overflow: hidden; position: relative;">
+            
+            <!-- Panel Header -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                <div>
+                    <div style="font-size: 13px; opacity: 0.9; letter-spacing: 0.05em; text-transform: uppercase;">Koli Barkodu</div>
+                    <div style="font-size: 20px; font-weight: 800; letter-spacing: 0.02em;" id="modalShipmentCode">-</div>
                 </div>
+                <div style="text-align: right; min-width: 180px;">
+                    <div style="font-size: 13px; opacity: 0.9; letter-spacing: 0.05em; text-transform: uppercase;">Alan Depo</div>
+                    <div style="font-size: 18px; font-weight: 700;" id="modalReceiverStore">-</div>
+                </div>
+                <button type="button" onclick="closeShipmentModal()" style="background: rgba(255,255,255,0.18); border: none; color: white; font-size: 22px; cursor: pointer; width: 42px; height: 42px; border-radius: 50%;">✕</button>
             </div>
 
-            <!-- Barkod Okutma -->
-            <div class="form-group" id="barcodeSection" style="display:none;">
-                <label for="barcode">📊 Barkod Okutunuz</label>
-                <input type="text" id="barcode" placeholder="Barkodu okutunuz..." autocomplete="off" autofocus>
-            </div>
+            <!-- Modal Body -->
+            <div style="padding: 20px; overflow-y: auto; flex: 1;">
+                
+                <!-- Barkod Input Alanı -->
+                <div class="form-group">
+                    <label for="barcodeInput">📊 Barkod Okutunuz</label>
+                    <input type="text" id="barcodeInput" placeholder="Barkodu okutunuz..." autocomplete="off" autofocus>
+                </div>
 
-            <div id="scanner-feedback" style="display:none; margin-bottom: 20px; padding: 12px; border-radius: 8px; text-align: center; font-weight: 600;"></div>
+                <div id="scannerFeedback" style="display:none; margin-bottom: 20px; padding: 12px; border-radius: 8px; text-align: center; font-weight: 600;"></div>
 
-            <div class="alert alert-info" style="display:none;" id="infoMsg">
-                💡 Barkodları okutarak koliye ürün ekleyebilirsiniz. Enter tuşu ile onaylayın.
-            </div>
-        </div>
+                <!-- Ürün Listesi (Tablo) -->
+                <div style="margin-top: 20px;">
+                    <h3 style="font-size: 14px; font-weight: 700; color: #2c3e50; margin-bottom: 10px;">📦 Koli İçeriği</h3>
+                    <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px;">
+                        <table class="items-table">
+                            <thead>
+                                <tr style="background: #f8f9fa; position: sticky; top: 0;">
+                                    <th style="width: 12%; padding: 10px 8px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #ddd;">Özel Kod</th>
+                                    <th style="width: 12%; padding: 10px 8px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #ddd;">Barkod</th>
+                                    <th style="width: 25%; padding: 10px 8px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #ddd;">Ürün Adı</th>
+                                    <th style="width: 12%; padding: 10px 8px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #ddd;">Rengi</th>
+                                    <th style="width: 12%; padding: 10px 8px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #ddd;">Bedeni</th>
+                                    <th style="width: 10%; padding: 10px 8px; text-align: center; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #ddd;">Adedi</th>
+                                    <th style="width: 7%; padding: 10px 8px; text-align: center; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #ddd;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalItemsList">
+                                <tr>
+                                    <td colspan="7" style="padding: 20px; text-align: center; color: #7f8c8d;">Henüz ürün eklenmemiş</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-        <!-- Sağ Panel: Koli İçeriği -->
-        <div class="panel">
-            <div class="panel-title">📦 Koli İçeriği</div>
-
-            <div id="shipmentContent" style="display:none;">
                 <!-- İstatistikler -->
-                <div class="stats">
-                    <div class="stat">
-                        <div class="stat-label">Toplam Ürün</div>
-                        <div class="stat-value" id="totalItems">0</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 12px; color: #7f8c8d; font-weight: 600; text-transform: uppercase;">Toplam Ürün</div>
+                        <div style="font-size: 20px; font-weight: 700; color: #2c3e50; margin-top: 5px;" id="modalTotalItems">0</div>
                     </div>
-                    <div class="stat">
-                        <div class="stat-label">Benzersiz Ürün</div>
-                        <div class="stat-value" id="uniqueProducts">0</div>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 12px; color: #7f8c8d; font-weight: 600; text-transform: uppercase;">Benzersiz Ürün</div>
+                        <div style="font-size: 20px; font-weight: 700; color: #2c3e50; margin-top: 5px;" id="modalUniqueProducts">0</div>
                     </div>
-                </div>
-
-                <!-- Durum -->
-                <div id="statusBadge"></div>
-
-                <!-- Ürünler Listesi (Tablo Biçimi) -->
-                <div class="items-list" id="itemsList">
-                    <div style="padding: 20px; text-align: center; color: #7f8c8d;">
-                        Henüz ürün eklenmemiş
-                    </div>
-                </div>
-
-                <!-- Koli İşlemleri -->
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button type="button" class="btn btn-danger" id="closeShipmentBtn" style="flex: 1;">
-                        🔒 Koliyi Kapat
-                    </button>
-                    <button type="button" class="btn btn-success" id="sendShipmentBtn" style="flex: 1; display:none;">
-                        ✈️ Gönder
-                    </button>
                 </div>
             </div>
 
-            <div id="noShipment" style="text-align: center; padding: 30px; color: #7f8c8d;">
-                <p>📋 Koli seçili değil</p>
-                <p style="font-size: 12px;">Soldan alıcı mağazasını seçiniz</p>
+            <!-- Panel Footer -->
+            <div style="padding: 18px 20px 20px; border-top: 1px solid #e2e8f0; display: flex; gap: 12px; background: #f9fafb;">
+                <button type="button" class="btn btn-secondary" onclick="closeShipmentModal()" style="flex: 1; background: #8d99ae; color: white;">✕ Kapat</button>
+                <button type="button" class="btn btn-danger" id="modalDeleteShipmentBtn" style="flex: 1; display: none; background: #d63939; color: white;">🗑️ Sil</button>
+                <button type="button" class="btn btn-danger" id="modalCloseShipmentBtn" style="flex: 1; background: #e76f51; color: white;">🔒 Koliyi Kapat</button>
+                <button type="button" class="btn btn-success" id="modalSendShipmentBtn" style="flex: 1; display: none;">✈️ Gönder</button>
             </div>
         </div>
     </div>
 
     <!-- Aktif Koliler Listesi -->
     {% if active_shipments %}
-    <div class="shipments-list">
-        <h3 style="font-size: 20px; font-weight: 700; color: #2c3e50; margin-bottom: 20px;">📑 Açık & Kapalı Koliler</h3>
+    <div class="shipments-list" id="shipmentsListSection">
+        <h3 style="font-size: 20px; font-weight: 700; color: #2c3e50; margin-bottom: 20px;">📑 Açık, Kapalı & Gönderilen Koliler</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+            <div style="background: #eef6ff; color: #1f4f8b; padding: 14px 18px; border-radius: 12px; min-width: 160px; box-shadow: inset 0 0 0 1px rgba(52, 152, 219, 0.08);">
+                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700;">Açık Koliler</div>
+                <div style="font-size: 24px; font-weight: 800; margin-top: 6px;">{{ open_shipments_count }}</div>
+            </div>
+            <div style="background: #fff4e5; color: #7a4f0f; padding: 14px 18px; border-radius: 12px; min-width: 160px; box-shadow: inset 0 0 0 1px rgba(243, 156, 18, 0.08);">
+                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700;">Kapalı Koliler</div>
+                <div style="font-size: 24px; font-weight: 800; margin-top: 6px;">{{ closed_shipments_count }}</div>
+            </div>
+            <div style="background: #e8f5e9; color: #1b5e20; padding: 14px 18px; border-radius: 12px; min-width: 160px; box-shadow: inset 0 0 0 1px rgba(76, 175, 80, 0.12);">
+                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700;">Gönderilen Koliler</div>
+                <div style="font-size: 24px; font-weight: 800; margin-top: 6px;">{{ sent_shipments_count }}</div>
+            </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+            <button type="button" id="shipmentFilterAll" class="filter-button active" onclick="filterShipments('all')" style="padding: 10px 16px; border: 1px solid #3498db; border-radius: 999px; background: #3498db; color: white; cursor: pointer;">Tümü</button>
+            <button type="button" id="shipmentFilterOpen" class="filter-button" onclick="filterShipments('open')" style="padding: 10px 16px; border: 1px solid #3498db; border-radius: 999px; background: #ffffff; color: #3498db; cursor: pointer;">Açık Koliler</button>
+            <button type="button" id="shipmentFilterClosed" class="filter-button" onclick="filterShipments('closed')" style="padding: 10px 16px; border: 1px solid #3498db; border-radius: 999px; background: #ffffff; color: #3498db; cursor: pointer;">Kapalı Koliler</button>
+            <button type="button" id="shipmentFilterSent" class="filter-button" onclick="filterShipments('sent')" style="padding: 10px 16px; border: 1px solid #3498db; border-radius: 999px; background: #ffffff; color: #3498db; cursor: pointer;">Gönderilen Koliler</button>
+        </div>
 
         {% for shipment in active_shipments %}
-        <div class="shipment-card" onclick="selectShipment({{ shipment.id }})" style="cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.boxShadow='0 8px 20px rgba(52, 152, 219, 0.2)'; this.style.borderColor='#3498db';" onmouseout="this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; this.style.borderColor='#ddd';">
-            <div class="shipment-card-header">
+        <button type="button" class="shipment-card" data-status="{{ shipment.status }}" onclick="selectShipment({{ shipment.id }})" style="cursor: pointer; transition: all 0.3s ease; border: 1px solid #ddd; background: white; padding: 18px; width: 100%; text-align: left; border-radius: 14px; margin-bottom: 14px; display: block;" onmouseover="this.style.boxShadow='0 8px 20px rgba(52, 152, 219, 0.2)'; this.style.borderColor='#3498db';" onmouseout="this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; this.style.borderColor='#ddd';">
+            <div class="shipment-card-header" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
                 <div>
-                    <div class="shipment-card-title">{{ shipment.shipment_code }}</div>
-                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
-                        → {{ shipment.receiver_store.code }} | {{ shipment.item_count }} ürün
-                    </div>
+                    <div class="shipment-card-title" style="font-size: 16px; font-weight: 700; color: #2c3e50;">{{ shipment.shipment_code }}</div>
+                    <div style="font-size: 13px; color: #7f8c8d; margin-top: 6px;">→ {{ shipment.receiver_store.code }} | {{ shipment.item_count }} ürün</div>
                 </div>
-                <div style="text-align: right;">
-                    <div class="status-badge status-{{ shipment.status }}">
+                <div style="text-align: right; min-width: 100px;">
+                    <div class="status-badge status-{{ shipment.status }}" style="font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 999px;">
                         {% if shipment.status == 'open' %}
                             🟢 Açık
                         {% elif shipment.status == 'closed' %}
@@ -496,8 +517,57 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </button>
         {% endfor %}
+    </div>
+
+    <div id="shipmentDetailsPanel" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.35); z-index: 1200; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; box-sizing: border-box;">
+        <div onclick="event.stopPropagation()" style="background: #fff; border: 1px solid #ddd; border-radius: 20px; padding: 28px 26px; box-shadow: 0 15px 45px rgba(0,0,0,0.18); width: 100%; max-width: 920px; max-height: calc(100vh - 80px); overflow-y: auto; position: relative; margin: 0;">
+            <button type="button" onclick="closeDetailsPanel()" style="position: absolute; top: 18px; right: 18px; width: 38px; height: 38px; border: none; border-radius: 50%; background: #e74c3c; color: white; font-size: 18px; cursor: pointer;">✕</button>
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: center;">
+                <div>
+                    <div style="font-size: 14px; color: #7f8c8d; text-transform: uppercase; letter-spacing: .08em;">Seçili Koli</div>
+                    <div id="detailsShipmentCode" style="font-size: 22px; font-weight: 700; color: #2c3e50; margin-top: 6px;">-</div>
+                    <div id="detailsReceiverStore" style="font-size: 14px; color: #7f8c8d; margin-top: 6px;">-</div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                    <div id="detailsStatusBadge" style="font-size: 13px; font-weight: 700; padding: 8px 12px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: #e8f5e9; color: #1b5e20;">-</div>
+                    <button type="button" id="detailsOpenModalBtn" class="btn btn-primary" style="padding: 11px 18px; border-radius: 999px; border: none; background: #3498db; color: white; cursor: pointer; display: none;">Koliye Git</button>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 16px; margin-top: 20px;">
+                <div style="background: #f8f9fa; padding: 14px 16px; border-radius: 12px; text-align: center;">
+                    <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase;">Toplam Ürün</div>
+                    <div id="detailsTotalItems" style="font-size: 20px; font-weight: 700; color: #2c3e50; margin-top: 8px;">0</div>
+                </div>
+                <div style="background: #f8f9fa; padding: 14px 16px; border-radius: 12px; text-align: center;">
+                    <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase;">Benzersiz Ürün</div>
+                    <div id="detailsUniqueProducts" style="font-size: 20px; font-weight: 700; color: #2c3e50; margin-top: 8px;">0</div>
+                </div>
+            </div>
+            <div style="margin-top: 20px;">
+                <div style="font-size: 14px; font-weight: 700; color: #2c3e50; margin-bottom: 10px;">Koli İçeriği</div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; min-width: 640px;">
+                        <thead>
+                            <tr style="background: #f8f9fa;">
+                                <th style="padding: 10px; text-align: left; font-weight: 700; color: #2c3e50;">Özel Kod</th>
+                                <th style="padding: 10px; text-align: left; font-weight: 700; color: #2c3e50;">Barkod</th>
+                                <th style="padding: 10px; text-align: left; font-weight: 700; color: #2c3e50;">Ürün Adı</th>
+                                <th style="padding: 10px; text-align: left; font-weight: 700; color: #2c3e50;">Rengi</th>
+                                <th style="padding: 10px; text-align: left; font-weight: 700; color: #2c3e50;">Bedeni</th>
+                                <th style="padding: 10px; text-align: center; font-weight: 700; color: #2c3e50;">Adet</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailsItemsList">
+                            <tr>
+                                <td colspan="6" style="padding: 18px; text-align: center; color: #7f8c8d;">Koli seçiniz ya da bir koli kartına tıklayın.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
     {% endif %}
 </div>
@@ -507,19 +577,44 @@
     let currentShipmentStatus = null;
     const senderStoreCode = '{{ sender_store.code }}';
 
-    // Mağaza seçilince otomatik koli oluştur
+    function setActiveFilter(buttonId) {
+        document.querySelectorAll('.filter-button').forEach(btn => {
+            if (btn.id === buttonId) {
+                btn.style.background = '#3498db';
+                btn.style.color = '#ffffff';
+            } else {
+                btn.style.background = '#ffffff';
+                btn.style.color = '#3498db';
+            }
+        });
+    }
+
+    function filterShipments(status) {
+        const cards = document.querySelectorAll('.shipment-card');
+        cards.forEach(card => {
+            const cardStatus = card.dataset.status;
+            if (status === 'all' || cardStatus === status) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        if (status === 'all') {
+            setActiveFilter('shipmentFilterAll');
+        } else if (status === 'open') {
+            setActiveFilter('shipmentFilterOpen');
+        } else if (status === 'closed') {
+            setActiveFilter('shipmentFilterClosed');
+        } else if (status === 'sent') {
+            setActiveFilter('shipmentFilterSent');
+        }
+    }
+
+    // Mağaza seçilince otomatik koli oluştur ve modal aç
     function autoCreateShipment() {
-        console.log('autoCreateShipment() çağrıldı');
         const receiverStore = document.getElementById('receiver_store').value;
         
         if (!receiverStore) {
-            console.log('Alıcı depo seçili değil, reset yapılıyor');
-            currentShipmentId = null;
-            document.getElementById('shipmentSelector').style.display = 'none';
-            document.getElementById('barcodeSection').style.display = 'none';
-            document.getElementById('infoMsg').style.display = 'none';
-            document.getElementById('shipmentContent').style.display = 'none';
-            document.getElementById('noShipment').style.display = 'block';
             return;
         }
 
@@ -529,7 +624,6 @@
             return;
         }
 
-        console.log('Koli oluşturuluyor, alıcı depo:', receiverStore);
         fetch('{{ request.path }}', {
             method: 'POST',
             headers: {
@@ -538,44 +632,41 @@
             },
             body: 'action=create_shipment&receiver_store_code=' + receiverStore
         })
-        .then(r => r.json())
+        .then(r => {
+            console.log('Response status:', r.status);
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
         .then(data => {
             console.log('Create shipment response:', data);
             if (data.success) {
                 currentShipmentId = data.shipment_id;
-                currentShipmentStatus = 'open';
+                currentShipmentStatus = data.status;
                 
-                console.log('Shipment ID:', currentShipmentId);
-                document.getElementById('currentShipmentCode').textContent = data.shipment_code;
-                document.getElementById('currentShipmentReceiver').textContent = `→ ${data.receiver_store_name}`;
+                document.getElementById('modalShipmentCode').textContent = data.shipment_code;
+                document.getElementById('modalReceiverStore').textContent = data.receiver_store_name;
                 
-                console.log('Elementleri gösteriliyor...');
-                document.getElementById('shipmentSelector').style.display = 'block';
-                document.getElementById('barcodeSection').style.display = 'block';
-                document.getElementById('infoMsg').style.display = 'block';
-                document.getElementById('shipmentContent').style.display = 'block';
-                document.getElementById('noShipment').style.display = 'none';
+                // Welcome ekranını gizle
+                document.getElementById('welcomeScreen').style.display = 'none';
                 
-                console.log('updateShipmentStats() çağrılıyor...');
-                updateShipmentStats();
-                document.getElementById('barcode').focus();
+                // Modali aç
+                document.getElementById('shipmentModal').style.display = 'flex';
+                renderShipmentState(data);
+                attachBarcodeListener();
+                document.getElementById('barcodeInput').focus();
             } else {
-                console.error('Hata:', data.error);
                 alert('❌ ' + data.error);
             }
         })
-        .catch(err => console.error('Fetch error:', err));
+        .catch(err => {
+            console.error('Fetch error:', err);
+            alert('Hata: ' + err.message);
+        });
     }
 
-    // Barkod okutma
-    document.getElementById('barcode').addEventListener('keypress', function(e) {
-        if (e.key !== 'Enter') return;
-        
-        const barcode = this.value.trim().toUpperCase();
-        if (!barcode || !currentShipmentId) {
-            alert('⚠️ Lütfen barkodu okutunuz!');
-            return;
-        }
+    // Modal pencereyi aç
+    function openShipmentModal(shipmentId) {
+        currentShipmentId = shipmentId;
 
         fetch('{{ request.path }}', {
             method: 'POST',
@@ -583,34 +674,114 @@
                 'X-CSRFToken': getCookie('csrftoken'),
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: `action=add_item&shipment_id=${currentShipmentId}&barcode=${encodeURIComponent(barcode)}`
+            body: `action=load_shipment&shipment_id=${currentShipmentId}`
         })
-        .then(r => r.json())
+        .then(r => {
+            console.log('Load shipment response status:', r.status);
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
         .then(data => {
-            const feedback = document.getElementById('scanner-feedback');
+            console.log('Load shipment data:', data);
             if (data.success) {
-                feedback.style.display = 'block';
-                feedback.style.backgroundColor = '#d4edda';
-                feedback.style.color = '#155724';
-                feedback.innerHTML = `✅ ${data.product_name} - Adet: ${data.quantity}`;
-                this.value = '';
-                updateShipmentStats();
+                document.getElementById('modalShipmentCode').textContent = data.shipment_code;
+                document.getElementById('modalReceiverStore').textContent = data.receiver_store_name;
+                
+                // Welcome ekranını gizle
+                document.getElementById('welcomeScreen').style.display = 'none';
+                
+                document.getElementById('shipmentModal').style.display = 'flex';
+                renderShipmentState(data);
+                attachBarcodeListener();
+                document.getElementById('barcodeInput').focus();
             } else {
+                alert('❌ ' + data.error);
+            }
+        });
+    }
+
+    // Modal pencereyi kapat
+    function closeShipmentModal() {
+        document.getElementById('shipmentModal').style.display = 'none';
+        document.getElementById('welcomeScreen').style.display = 'block';
+        document.getElementById('receiver_store').value = '';
+        document.getElementById('barcodeInput').value = '';
+        document.getElementById('barcodeInput').disabled = false;
+        document.getElementById('barcodeInput').placeholder = 'Barkodu okutunuz...';
+        document.getElementById('modalItemsList').innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; color: #7f8c8d;">Henüz ürün eklenmemiş</td></tr>';
+        document.getElementById('modalTotalItems').textContent = '0';
+        document.getElementById('modalUniqueProducts').textContent = '0';
+        currentShipmentId = null;
+    }
+
+    // Barkod okutma - Dinamik listener attach
+    function attachBarcodeListener() {
+        const barcodeInput = document.getElementById('barcodeInput');
+        if (!barcodeInput) return;
+
+        // Önceki listener'ları temizle
+        const newInput = barcodeInput.cloneNode(true);
+        barcodeInput.parentNode.replaceChild(newInput, barcodeInput);
+
+        const freshInput = document.getElementById('barcodeInput');
+        freshInput.addEventListener('keypress', function(e) {
+            if (e.key !== 'Enter') return;
+            
+            const barcode = this.value.trim().toUpperCase();
+            if (!barcode || !currentShipmentId) {
+                alert('Lutfen barkodu okutunuz!');
+                return;
+            }
+
+            fetch('{{ request.path }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `action=add_item&shipment_id=${currentShipmentId}&barcode=${encodeURIComponent(barcode)}`
+            })
+            .then(r => {
+                console.log('Add item response status:', r.status);
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.json();
+            })
+            .then(data => {
+                console.log('Add item response:', data);
+                const feedback = document.getElementById('scannerFeedback');
+                if (data.success) {
+                    feedback.style.display = 'block';
+                    feedback.style.backgroundColor = '#d4edda';
+                    feedback.style.color = '#155724';
+                    feedback.innerHTML = `Urun eklendi: ${data.items[data.items.length - 1].product_name || barcode} - Adet: ${data.items[data.items.length - 1].quantity}`;
+                    this.value = '';
+                    renderShipmentState(data);
+                } else {
+                    feedback.style.display = 'block';
+                    feedback.style.backgroundColor = '#ffebee';
+                    feedback.style.color = '#c62828';
+                    feedback.innerHTML = `Hata: ${data.error}`;
+                    this.value = '';
+                }
+                
+                setTimeout(() => feedback.style.display = 'none', 3000);
+            })
+            .catch(err => {
+                console.error('Add item error:', err);
+                const feedback = document.getElementById('scannerFeedback');
                 feedback.style.display = 'block';
                 feedback.style.backgroundColor = '#ffebee';
                 feedback.style.color = '#c62828';
-                feedback.innerHTML = `❌ ${data.error}`;
-                this.value = '';
-            }
-            
-            setTimeout(() => feedback.style.display = 'none', 3000);
+                feedback.innerHTML = `Network Hatasi: ${err.message}`;
+                setTimeout(() => feedback.style.display = 'none', 5000);
+            });
+
+            this.value = '';
         });
+    }
 
-        this.value = '';
-    });
-
-    // Koliyi kapat
-    document.getElementById('closeShipmentBtn').addEventListener('click', function() {
+    // Koliyi kapat (Modal içinden)
+    document.getElementById('modalCloseShipmentBtn').addEventListener('click', function() {
         if (!confirm('Koliyi kapatmak istediğinizden emin misiniz?')) return;
 
         fetch('{{ request.path }}', {
@@ -621,20 +792,69 @@
             },
             body: `action=close_shipment&shipment_id=${currentShipmentId}`
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
         .then(data => {
             if (data.success) {
                 currentShipmentStatus = 'closed';
-                alert('✅ Koli kapatıldı!');
-                updateShipmentStats();
+                alert('Koli kapatıldı!');
+                updateShipmentStatsModal();
             } else {
-                alert('❌ ' + data.error);
+                alert('Hata: ' + data.error);
             }
+        })
+        .catch(err => {
+            console.error('Close shipment error:', err);
+            alert('Hata: ' + err.message);
         });
     });
 
-    // Koliyi gönder
-    document.getElementById('sendShipmentBtn').addEventListener('click', function() {
+    function renderShipmentState(data) {
+        currentShipmentStatus = data.status;
+
+        const itemsList = document.getElementById('modalItemsList');
+        const totalItems = document.getElementById('modalTotalItems');
+        const uniqueProducts = document.getElementById('modalUniqueProducts');
+        const deleteBtn = document.getElementById('modalDeleteShipmentBtn');
+        const sendBtn = document.getElementById('modalSendShipmentBtn');
+        const closeBtn = document.getElementById('modalCloseShipmentBtn');
+
+        totalItems.textContent = data.total_items || 0;
+        uniqueProducts.textContent = data.unique_products || 0;
+        closeBtn.style.display = data.status === 'open' ? 'block' : 'none';
+        deleteBtn.style.display = data.status === 'open' ? 'block' : 'none';
+        sendBtn.style.display = data.status === 'closed' ? 'block' : 'none';
+        document.getElementById('barcodeInput').disabled = data.status !== 'open';
+        document.getElementById('barcodeInput').placeholder = data.status === 'open' ? 'Barkodu okutunuz...' : 'Bu koli kapatıldı, düzenleme kapalı';
+
+        if (!data.items || data.items.length === 0) {
+            itemsList.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; color: #7f8c8d;">Henüz ürün eklenmemiş</td></tr>';
+            return;
+        }
+
+        let tableHTML = '';
+        data.items.forEach(item => {
+            tableHTML += `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 10px 8px;">${item.spec_code || '-'}</td>
+                    <td style="padding: 10px 8px;">${item.barcode}</td>
+                    <td style="padding: 10px 8px;"><strong>${item.product_name}</strong></td>
+                    <td style="padding: 10px 8px;">${item.product_color || '-'}</td>
+                    <td style="padding: 10px 8px;">${item.product_size || '-'}</td>
+                    <td style="padding: 10px 8px; text-align: center; font-weight: 700;">${item.quantity}</td>
+                    <td style="padding: 10px 8px; text-align: center;">
+                        ${data.status === 'open' ? `<button type="button" style="background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="removeItem(${item.id})">❌</button>` : ''}
+                    </td>
+                </tr>
+            `;
+        });
+        itemsList.innerHTML = tableHTML;
+    }
+
+    // Koliyi gönder (Modal içinden)
+    document.getElementById('modalSendShipmentBtn').addEventListener('click', function() {
         if (!confirm('Koliyi göndermek istediğinizden emin misiniz?')) return;
 
         fetch('{{ request.path }}', {
@@ -645,26 +865,66 @@
             },
             body: `action=send_shipment&shipment_id=${currentShipmentId}`
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
         .then(data => {
             if (data.success) {
-                alert('✅ ' + data.message);
+                alert(data.message);
+                closeShipmentModal();
                 location.reload();
             } else {
-                alert('❌ ' + data.error);
+                alert('Hata: ' + data.error);
             }
+        })
+        .catch(err => {
+            console.error('Send shipment error:', err);
+            alert('Hata: ' + err.message);
         });
     });
 
-    function updateShipmentStats() {
+    // Açık koli sil
+    document.getElementById('modalDeleteShipmentBtn').addEventListener('click', function() {
+        if (!currentShipmentId) return;
+        if (!confirm('Açık koliyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) return;
+
+        fetch('{{ request.path }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `action=delete_shipment&shipment_id=${currentShipmentId}`
+        })
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                closeShipmentModal();
+                location.reload();
+            } else {
+                alert('Hata: ' + data.error);
+            }
+        })
+        .catch(err => {
+            console.error('Delete shipment error:', err);
+            alert('Hata: ' + err.message);
+        });
+    });
+
+    // Modal'da koli bilgilerini güncelle
+    function updateShipmentStatsModal() {
         if (!currentShipmentId) return;
 
-        const itemsList = document.getElementById('itemsList');
-        const totalItems = document.getElementById('totalItems');
-        const uniqueProducts = document.getElementById('uniqueProducts');
-        const statusBadge = document.getElementById('statusBadge');
-        const sendBtn = document.getElementById('sendShipmentBtn');
-        const closeBtn = document.getElementById('closeShipmentBtn');
+        const itemsList = document.getElementById('modalItemsList');
+        const totalItems = document.getElementById('modalTotalItems');
+        const uniqueProducts = document.getElementById('modalUniqueProducts');
+        const sendBtn = document.getElementById('modalSendShipmentBtn');
+        const closeBtn = document.getElementById('modalCloseShipmentBtn');
 
         fetch('{{ request.path }}', {
             method: 'POST',
@@ -674,79 +934,34 @@
             },
             body: `action=load_shipment&shipment_id=${currentShipmentId}`
         })
-        .then(r => r.json())
+        .then(r => {
+            console.log('UpdateShipmentStats response status:', r.status);
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
         .then(data => {
-            console.log('Load shipment response:', data);
+            console.log('UpdateShipmentStats data:', data);
             if (!data.success) {
-                console.error('Load failed:', data.error);
+                console.error('Shipment load error:', data.error);
                 alert('❌ Hata: ' + data.error);
                 return;
             }
-            
-            currentShipmentStatus = data.status;
-            totalItems.textContent = data.total_items;
-            uniqueProducts.textContent = data.unique_products;
-            
-            // Status badge
-            const statusMap = {
-                'open': { text: '🟢 Açık', class: 'status-open' },
-                'closed': { text: '🟡 Kapalı', class: 'status-closed' },
-                'sent': { text: '✅ Gönderildi', class: 'status-sent' }
-            };
-            const status = statusMap[data.status];
-            statusBadge.innerHTML = `<div class="status-badge ${status.class}">${status.text}</div>`;
-            
-            // Buton durumları
-            closeBtn.style.display = data.status === 'open' ? 'block' : 'none';
-            sendBtn.style.display = data.status === 'closed' ? 'block' : 'none';
-            
-            // Ürünleri listele (tablo biçimi)
-            if (data.items.length === 0) {
-                itemsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">Henüz ürün eklenmemiş</div>';
-            } else {
-                let tableHTML = `
-                    <table class="items-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 30%;">Ürün Adı</th>
-                                <th style="width: 15%;">Barkod</th>
-                                <th style="width: 15%;">Özel Kod</th>
-                                <th style="width: 15%;">Renk</th>
-                                <th style="width: 12%;">Fiyat</th>
-                                <th style="width: 8%;">Adet</th>
-                                <th style="width: 5%;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-                
-                data.items.forEach(item => {
-                    const formattedPrice = (item.price / 100).toFixed(2) + ' ₺';
-                    tableHTML += `
-                        <tr>
-                            <td><strong>${item.product_name}</strong></td>
-                            <td>${item.barcode}</td>
-                            <td>${item.spec_code || '-'}</td>
-                            <td>${item.product_color || '-'}</td>
-                            <td>${formattedPrice}</td>
-                            <td style="text-align: center;"><span class="item-quantity">${item.quantity}</span></td>
-                            <td style="text-align: center;"><button type="button" class="btn-remove" onclick="removeItem(${item.id})">❌</button></td>
-                        </tr>
-                    `;
-                });
-                
-                tableHTML += `
-                        </tbody>
-                    </table>
-                `;
-                console.log('Generated table:', tableHTML);
-                itemsList.innerHTML = tableHTML;
-            }
+            renderShipmentState(data);
         })
-        .catch(err => console.error('Fetch error:', err));
+        .catch(err => {
+            console.error('UpdateShipmentStats fetch error:', err);
+            console.error('Error details:', err.message);
+            itemsList.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; color: #c62828;">Veri yukleme hatasi: ' + err.message + '</td></tr>';
+        });
     }
 
+    // Koliden ürün çıkart
     function removeItem(itemId) {
+        if (currentShipmentStatus !== 'open') {
+            alert('Bu koli kapatıldı ve ürün düzenleme devre dışı bırakıldı.');
+            return;
+        }
+
         fetch('{{ request.path }}', {
             method: 'POST',
             headers: {
@@ -755,16 +970,24 @@
             },
             body: `action=remove_item&item_id=${itemId}`
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
         .then(data => {
             if (data.success) {
-                updateShipmentStats();
+                updateShipmentStatsModal();
             } else {
-                alert('❌ ' + data.error);
+                alert('Hata: ' + data.error);
             }
+        })
+        .catch(err => {
+            console.error('Remove item error:', err);
+            alert('Hata: ' + err.message);
         });
     }
 
+    // Cookie yardımcı fonksiyon
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -780,35 +1003,98 @@
         return cookieValue;
     }
 
+    // Aktif koliler listesinden koli seç
     function selectShipment(shipmentId) {
-        currentShipmentId = shipmentId;
-
         fetch('{{ request.path }}', {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken'),
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: `action=load_shipment&shipment_id=${currentShipmentId}`
+            body: `action=load_shipment&shipment_id=${shipmentId}`
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
         .then(data => {
             if (data.success) {
-                document.getElementById('currentShipmentCode').textContent = data.shipment_code;
-                document.getElementById('currentShipmentReceiver').textContent = `→ ${data.receiver_store_name}`;
-                document.getElementById('shipmentSelector').style.display = 'block';
-                document.getElementById('barcodeSection').style.display = 'block';
-                document.getElementById('infoMsg').style.display = 'block';
-                document.getElementById('shipmentContent').style.display = 'block';
-                document.getElementById('noShipment').style.display = 'none';
-                
-                updateShipmentStats();
-                document.getElementById('barcode').focus();
+                showShipmentDetails(data);
             } else {
-                alert('❌ ' + data.error);
+                alert('Hata: ' + data.error);
             }
+        })
+        .catch(err => {
+            console.error('Shipment select error:', err);
+            alert('Hata: ' + err.message);
         });
     }
+
+    function showShipmentDetails(data) {
+        currentShipmentId = data.shipment_id;
+        currentShipmentStatus = data.status;
+
+        document.getElementById('shipmentDetailsPanel').style.display = 'flex';
+        document.getElementById('detailsShipmentCode').textContent = data.shipment_code;
+        document.getElementById('detailsReceiverStore').textContent = data.receiver_store_name;
+        document.getElementById('detailsTotalItems').textContent = data.total_items || 0;
+        document.getElementById('detailsUniqueProducts').textContent = data.unique_products || 0;
+
+        const statusBadge = document.getElementById('detailsStatusBadge');
+        if (data.status === 'open') {
+            statusBadge.textContent = '🟢 Açık';
+            statusBadge.style.background = '#e8f5e9';
+            statusBadge.style.color = '#1b5e20';
+            document.getElementById('detailsOpenModalBtn').style.display = 'inline-flex';
+        } else if (data.status === 'closed') {
+            statusBadge.textContent = '🟡 Kapalı';
+            statusBadge.style.background = '#fff8e1';
+            statusBadge.style.color = '#795548';
+            document.getElementById('detailsOpenModalBtn').style.display = 'inline-flex';
+        } else {
+            statusBadge.textContent = '✅ Gönderildi';
+            statusBadge.style.background = '#e3f2fd';
+            statusBadge.style.color = '#0d47a1';
+            document.getElementById('detailsOpenModalBtn').style.display = 'none';
+        }
+
+        const itemsList = document.getElementById('detailsItemsList');
+        if (!data.items || data.items.length === 0) {
+            itemsList.innerHTML = '<tr><td colspan="6" style="padding: 18px; text-align: center; color: #7f8c8d;">Bu koli hâlâ boş.</td></tr>';
+        } else {
+            let html = '';
+            data.items.forEach(item => {
+                html += `
+                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                        <td style="padding: 10px;">${item.spec_code || '-'}</td>
+                        <td style="padding: 10px;">${item.barcode}</td>
+                        <td style="padding: 10px;">${item.product_name || '-'}</td>
+                        <td style="padding: 10px;">${item.product_color || '-'}</td>
+                        <td style="padding: 10px;">${item.product_size || '-'}</td>
+                        <td style="padding: 10px; text-align: center;">${item.quantity}</td>
+                    </tr>
+                `;
+            });
+            itemsList.innerHTML = html;
+        }
+    }
+
+    document.getElementById('detailsOpenModalBtn').addEventListener('click', function() {
+        if (!currentShipmentId) return;
+        closeDetailsPanel();
+        openShipmentModal(currentShipmentId);
+    });
+
+    function closeDetailsPanel() {
+        document.getElementById('shipmentDetailsPanel').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const detailsPanel = document.getElementById('shipmentDetailsPanel');
+        if (detailsPanel) {
+            detailsPanel.style.display = 'none';
+        }
+    });
 </script>
 
 {% endblock %}
