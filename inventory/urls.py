@@ -26,4 +26,5 @@ urlpatterns = [
     path('admin-panel/users/create/', views.admin_create_user, name='admin_create_user'),
     path('admin-panel/users/delete/<int:user_id>/', views.admin_delete_user, name='admin_delete_user'),
     path('admin-panel/stocks-management/', views.admin_stocks_management, name='admin_stocks_management'),
+    path('admin-panel/products/delete/<int:product_id>/', views.admin_delete_product, name='admin_delete_product'),
 ]

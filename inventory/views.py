@@ -999,7 +999,9 @@ def admin_stocks_management(request):
             messages.success(request, f'✅ "{product.prodName}" ürünü başarıyla kaydedildi.')
             return redirect('admin_stocks_management')
         else:
-            messages.error(request, '❌ Ürün kaydı sırasında hata oluştu. Lütfen kontrol ediniz.')
+            for field_errors in form.errors.values():
+                for error in field_errors:
+                    messages.error(request, f'❌ {error}')
     
     context = {
         'form': form,
@@ -1007,6 +1009,31 @@ def admin_stocks_management(request):
         'total_products': products.count(),
     }
     return render(request, 'inventory/admin/stocks_management.html', context)
+
+
+@admin_required
+def admin_delete_product(request, product_id):
+    """Ürün silme işlemi"""
+    try:
+        product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        messages.error(request, '❌ Ürün bulunamadı.')
+        return redirect('admin_stocks_management')
+
+    if ShipmentItem.objects.filter(product=product).exists():
+        messages.error(request, '❌ Bu ürün koli kayıtlarında kullanıldığı için silinemez.')
+        return redirect('admin_stocks_management')
+
+    product_name = product.prodName or product.barcode or 'Ürün'
+    barcode = product.barcode
+
+    with transaction.atomic():
+        if barcode:
+            Stock.objects.filter(barcode=barcode).delete()
+        product.delete()
+
+    messages.success(request, f'✅ "{product_name}" ürünü başarıyla silindi.')
+    return redirect('admin_stocks_management')
 
 
 @admin_required

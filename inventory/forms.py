@@ -177,3 +177,20 @@ class ProductForm(forms.ModelForm):
             if discount < 0 or discount > 100:
                 raise forms.ValidationError('İndirim 0 ile 100 arasında olmalıdır.')
         return discount
+
+    def clean_barcode(self):
+        barcode = self.cleaned_data.get('barcode')
+        if not barcode:
+            return barcode
+
+        barcode = barcode.strip()
+        if not barcode:
+            return barcode
+
+        qs = Product.objects.filter(barcode__iexact=barcode)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('Bu barkod zaten kayıtlı. Aynı barkod ile ürün eklenemez.')
+
+        return barcode
